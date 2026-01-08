@@ -1,0 +1,247 @@
+.journal {
+  max-width: 768px;
+  margin: 0 auto;
+  padding: 20px 0 120px 0;
+  min-height: 100vh;
+  overflow-y: auto;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+
+  &__content {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  &__title {
+    font-size: 22px;
+    font-weight: 500;
+    padding-left: 20px;
+
+    margin: 0;
+    color: #0f1f35;
+  }
+
+  &__section {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+
+  &__section-title {
+    font-size: 14px;
+    font-weight: 500;
+    padding-left: 20px;
+
+    color: #0f1f35;
+  }
+
+  &__roles {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    padding: 0 20px 4px 20px;
+    overflow-x: auto;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
+
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  &__role-card {
+    background: #FFFFFF;
+    border-radius: 16px;
+    
+    border: 1px solid #EAECF0;
+    padding: 16px;
+    width: 252px;
+    height: 180px;
+  }
+
+  &__role-card:first-of-type {
+    padding-left: 20px;
+  }
+
+  &__role-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 8px;
+  }
+
+  &__role-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  &__role-title {
+    font-size: 14px;
+    font-weight: 500;
+    color: #0f1f35;
+  }
+
+  &__role-level {
+    font-size: 12px;
+    color: #9B9BA1;
+    
+    margin-top: 2px;
+  }
+
+  &__role-current {
+    font-size: 12px;
+    font-weight: 500;
+    color: #8B93A7;
+    white-space: nowrap;
+  }
+
+  &__role-premium {
+    border: none;
+    border-radius: 999px;
+    padding: 6px 8px;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #FFFFFF;
+    background: linear-gradient(90deg, #4756FF 0%, #7B86FF 100%);
+  }
+
+  &__role-description {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 8px;
+    color: #0f1f35;
+    font-size: 12px;
+    font-weight: 400;
+  }
+
+  &__role-line {
+    color: #0f1f35;
+  }
+
+  &__role-tags {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 8px;
+  }
+
+  &__role-tag {
+    padding: 10px 8px;
+    border-radius: 12px;
+    border: 1px solid #EAECF0;
+    font-size: 12px;
+    font-weight: 400;
+    color: #0f1f35;
+    background: #FFFFFF;
+    white-space: nowrap;
+  }
+
+  &__role-progress {
+    height: 4px;
+    background: #EEF0F3;
+    border-radius: 999px;
+    overflow: hidden;
+  }
+
+  &__role-progress-fill {
+    height: 100%;
+    background: #3843FF;
+    border-radius: 999px;
+  }
+
+  &__quests {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding:0 20px;
+  }
+
+  &__quest-card {
+    background: #FFFFFF;
+    border-radius: 16px;
+    border: 1px solid #EAECF0;
+    padding: 12px 16px;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    grid-template-rows: auto auto;
+    gap: 10px 14px;
+    align-items: center;
+  }
+
+  &__quest-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 12px;
+    background: #F2F3F6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+  }
+
+  &__quest-content {
+    grid-column: 2 / 3;
+  }
+
+  &__quest-title {
+    font-size: 14px;
+    font-weight: 500;
+    color: #0f1f35;
+  }
+
+  &__quest-reward {
+    grid-column: 3 / 4;
+    padding: 10px 8px;
+    border-radius: 12px;
+    border: 1px solid #EAECF0;
+    font-size: 12px;
+    font-weight: 400;
+    color: #0f1f35;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &__quest-reward--done {
+    color: #3BA935;
+    width: 40px;
+    height: 40px;
+    font-size: 18px;
+    font-weight: 600;
+    padding: 0;
+    border-radius: 12px;
+  }
+
+  &__quest-progress {
+    grid-column: 1 / -1;
+    height: 4px;
+    background: #EEF0F3;
+    border-radius: 999px;
+    overflow: hidden;
+  }
+
+  &__quest-progress-fill {
+    height: 100%;
+    background: #3843FF;
+    border-radius: 999px;
+  }
+
+  @media (max-width: 640px) {
+    &__roles {
+      grid-template-columns: repeat(2, minmax(252px, 1fr));
+    }
+  }
+}

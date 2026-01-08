@@ -1,0 +1,56 @@
+.level-card {
+  background: white;
+  border-radius: 16px;
+  padding: 12px 16px;
+  margin-left: 20px;
+  margin-right: 20px;
+  border: 1px solid #EAECF0;
+  margin: 0 20px 20px 20px;
+  box-shadow: 0 2px 8px rgba(15, 31, 53, 0.04);
+
+  &__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+
+  &__info {
+    flex: 1;
+  }
+
+  &__title {
+    font-size: 14px;
+    font-weight: 500;
+    margin: 0 0 4px 0;
+    color: #0f1f35;
+  }
+
+  &__level {
+    font-size: 12px;
+    font-weight: 500;
+    margin: 0;
+    color: #8b93a7;
+  }
+
+  &__xp {
+    font-size: 12px;
+    font-weight: 500;
+    color: #9B9BA1;
+  }
+
+  &__progress-bar {
+    height: 4px;
+    background: #eef1f8;
+    border-radius: 8px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  &__progress-fill {
+    height: 100%;
+    background: #3843FF;
+    border-radius: 4px;
+    transition: width 0.3s ease;
+  }
+}
