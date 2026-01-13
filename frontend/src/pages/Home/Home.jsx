@@ -161,8 +161,9 @@ const Home = () => {
         onSkipHabit={handleSkipHabit}
         onEditHabit={handleOpenEdit}
         onOpenDetails={handleOpenDetails}
-      />
-      <FloatingAction onClick={handleOpenCreate} />
+      >
+        <FloatingAction onClick={handleOpenCreate} />
+      </HabitsSection>
       <BottomNav />
       <HabitModal
         isOpen={isModalOpen}

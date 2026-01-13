@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import './HabitsSection.scss'
 
-const HabitsSection = ({ habits, onToggleHabit, onSkipHabit, onEditHabit, onOpenDetails }) => {
+const HabitsSection = ({ habits, onToggleHabit, onSkipHabit, onEditHabit, onOpenDetails, children }) => {
   const [swipedId, setSwipedId] = useState(null)
   const [touchStart, setTouchStart] = useState(null)
   const [touchEnd, setTouchEnd] = useState(null)
@@ -137,6 +137,7 @@ const HabitsSection = ({ habits, onToggleHabit, onSkipHabit, onEditHabit, onOpen
           </div>
         ))}
       </div>
+      {children ? <div className="habits-section__actions">{children}</div> : null}
     </section>
   )
 }

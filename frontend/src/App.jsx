@@ -1,21 +1,24 @@
+import { Suspense, lazy } from 'react'
 import { Routes, Route } from 'react-router-dom'
-import Home from './pages/Home/Home.jsx'
-import Journal from './pages/Journal/Journal.jsx'
-import Shop from './pages/Shop/Shop.jsx'
-import Stats from './pages/Stats/Stats.jsx'
-import Profile from './pages/Profile/Profile.jsx'
 import Preloader from './pages/Preloader/Preloader.jsx'
+
+const Home = lazy(() => import('./pages/Home/Home.jsx'))
+const Journal = lazy(() => import('./pages/Journal/Journal.jsx'))
+const Shop = lazy(() => import('./pages/Shop/Shop.jsx'))
+const Stats = lazy(() => import('./pages/Stats/Stats.jsx'))
+const Profile = lazy(() => import('./pages/Profile/Profile.jsx'))
 
 function App() {
   return (
-    <Routes>
-      <Route path="/" element={<Home />} />
-      <Route path="/journal" element={<Journal />} />
-      <Route path="/shop" element={<Shop />} />
-      <Route path="/stats" element={<Stats />} />
-      <Route path="/profile" element={<Profile />} />
-      <Route path="/preloader" element={<Preloader />} />
-    </Routes>
+    <Suspense fallback={<Preloader />}>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/journal" element={<Journal />} />
+        <Route path="/shop" element={<Shop />} />
+        <Route path="/stats" element={<Stats />} />
+        <Route path="/profile" element={<Profile />} />
+      </Routes>
+    </Suspense>
   )
 }
 
