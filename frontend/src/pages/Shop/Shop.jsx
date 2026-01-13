@@ -8,7 +8,7 @@ import addHabitIcon from '../../assets/shop/add1.png'
 import './Shop.scss'
 
 const Shop = () => {
-  const [activeCurrency, setActiveCurrency] = useState('stars')
+  const [activeCurrency, setActiveCurrency] = useState('rub')
   const tabs = [
     { id: 'rub', label: '₽ RUB' },
     { id: 'stars', label: '⭐ Stars' }
@@ -75,20 +75,6 @@ const Shop = () => {
     <div className="shop">
       <div className="shop__content">
         <h2 className="shop__title">Магазин</h2>
-        <div className="shop__tabs">
-          <span className="shop__tab-indicator" style={indicatorStyle}></span>
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              className={`shop__tab ${activeCurrency === tab.id ? 'shop__tab--active' : ''}`}
-              type="button"
-              onClick={() => setActiveCurrency(tab.id)}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
         <div className="shop__grid">
           {products.map((product) => (
             <div
