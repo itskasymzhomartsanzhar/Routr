@@ -69,10 +69,10 @@ const Shop = () => {
   const indicatorStyle = {
     transform: `translateX(${activeIndex * 100}%)`
   }
+  const currencySymbol = activeCurrency === 'rub' ? '₽' : '⭐'
 
   return (
     <div className="shop">
-      <Header userName="Mikhail" />
       <div className="shop__content">
         <h2 className="shop__title">Магазин</h2>
         <div className="shop__tabs">
@@ -101,7 +101,7 @@ const Shop = () => {
               <div className="shop__card-title">{product.title}</div>
               <div className="shop__card-subtitle">{product.subtitle}</div>
               <div className="shop__card-price">
-                {product.price} ⭐
+                {product.price} {currencySymbol}
               </div>
             </div>
           ))}
