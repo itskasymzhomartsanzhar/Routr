@@ -1,0 +1,72 @@
+.preloader {
+  max-width: 768px;
+  margin: 0 auto;
+  padding: 20px 0 12px 0;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+
+  &__content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    text-align: center;
+  }
+
+  &__spinner {
+    width: 56px;
+    height: 56px;
+    animation: preloaderSpin 0.9s linear infinite;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &__spinner-svg {
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+  }
+
+  &__spinner-track {
+    fill: none;
+    stroke: #EEF0F3;
+    stroke-width: 8;
+  }
+
+  &__spinner-fill {
+    fill: none;
+    stroke: #3843FF;
+    stroke-width: 8;
+    stroke-linecap: round;
+    stroke-dasharray: 110 40;
+  }
+
+  &__quote {
+    font-size: 17px;
+    font-weight: 400;
+    color: #8B93A7;
+    line-height: 1.4;
+    max-width: 100%;
+    margin: 0 33px;
+    text-align: center;
+  }
+
+  &__author {
+    font-size: 17px;
+    font-weight: 400;
+    color: #8B93A7;
+  }
+}
+
+@keyframes preloaderSpin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}

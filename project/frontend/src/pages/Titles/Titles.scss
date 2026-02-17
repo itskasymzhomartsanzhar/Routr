@@ -1,0 +1,99 @@
+.titles {
+  min-height: 100vh;
+  background: #F6F7FB;
+  padding-bottom: 90px;
+
+  &__content {
+    padding: 24px 20px 40px;
+  }
+
+  &__title {
+    font-size: 22px;
+    font-weight: 600;
+    color: #0F1F35;
+    margin-bottom: 18px;
+  }
+
+  &__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 16px;
+  }
+
+  &__card {
+    background: #FFFFFF;
+    border-radius: 16px;
+    border: 1px solid #E6E9F0;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  &__card--current {
+    border-color: #3843FF;
+    box-shadow: 0 12px 28px rgba(56, 67, 255, 0.12);
+  }
+
+  &__card--locked {
+    opacity: 0.85;
+  }
+
+  &__card-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  &__card-name {
+    font-weight: 600;
+    color: #0F1F35;
+  }
+
+  &__card-levels {
+    font-size: 12px;
+    color: #8B93A7;
+    margin-top: 2px;
+  }
+
+  &__badge {
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    background: #EEF2FF;
+    color: #3843FF;
+    font-weight: 600;
+  }
+
+  &__badge--locked {
+    background: #FFEBD8;
+    color: #D97706;
+  }
+
+  &__card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  &__privilege {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    color: #3D4657;
+  }
+
+  &__privilege-label {
+    color: #6B7386;
+  }
+
+  &__privilege-value {
+    font-weight: 600;
+  }
+
+  &__empty {
+    color: #8B93A7;
+    font-size: 14px;
+  }
+}

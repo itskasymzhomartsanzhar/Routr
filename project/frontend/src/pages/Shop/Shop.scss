@@ -1,0 +1,154 @@
+.shop {
+  max-width: 768px;
+  margin: 0 auto;
+  padding: 20px 20px 120px;
+  min-height: 100vh;
+  overflow-y: auto;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+
+  &__content {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  &__title {
+    font-size: 22px;
+    font-weight: 700;
+    margin: 0;
+    color: #0f1f35;
+  }
+
+  &__tabs {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+    padding: 4px;
+    background: #EEF0F3;
+    border-radius: 999px;
+    position: relative;
+  }
+
+  &__tab-indicator {
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    width: calc((100% - 8px) / 2);
+    height: 32px;
+    border-radius: 999px;
+    background: #FFFFFF;
+    box-shadow: 0 6px 14px rgba(15, 23, 42, 0.08);
+    transition: transform 0.25s ease;
+    will-change: transform;
+  }
+
+  &__tab {
+    border: none;
+    background: transparent;
+    height: 32px;
+    padding: 0 8px;
+    border-radius: 999px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #7C8392;
+    cursor: pointer;
+    position: relative;
+    z-index: 1;
+  }
+
+  &__tab--active {
+    color: #3843FF;
+  }
+
+  &__grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+  }
+
+  &__card {
+    background: #FFFFFF;
+    border-radius: 24px;
+    border: 1px solid #EAECF0;
+    padding: 18px 14px 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 10px;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+  }
+
+  &__card-icon {
+    width: 70px;
+    height: 70px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &__card-icon img {
+    width: 70px;
+    height: 70px;
+    object-fit: contain;
+  }
+
+  &__card-title {
+    font-size: 14px;
+    font-weight: 500;
+    color: #0f1f35;
+    white-space: pre-line;
+  }
+
+  &__card-subtitle {
+    font-size: 12px;
+    color: #9B9BA1;
+    font-weight: 400;
+    white-space: pre-line;
+  }
+
+  &__card-price {
+    margin-top: 6px;
+    background: #3843FF;
+    color: #FFFFFF;
+    width: 100%;
+    padding: 8px 18px;
+    border-radius: 999px;
+    font-weight: 600;
+    font-size: 14px;
+    border: none;
+    cursor: pointer;
+  }
+
+  &__card-price:disabled {
+    opacity: 0.7;
+    cursor: default;
+  }
+
+  &__status {
+    font-size: 13px;
+    border-radius: 12px;
+    padding: 10px 12px;
+    border: 1px solid #E5E7EB;
+    background: #F8FAFC;
+    color: #0F172A;
+  }
+
+  &__status--success {
+    color: #166534;
+    background: #ECFDF5;
+    border-color: #BBF7D0;
+  }
+
+  &__status--error {
+    color: #991B1B;
+    background: #FEF2F2;
+    border-color: #FECACA;
+  }
+}

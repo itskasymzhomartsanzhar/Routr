@@ -1,0 +1,90 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: docker/backend/Dockerfile
+    env_file:
+      - .env
+    environment:
+      DJANGO_DEBUG: "0"
+      SQLITE_PATH: /data/db.sqlite3
+      REDIS_URL: redis://redis:6379/0
+    volumes:
+      - db_data:/data
+      - media_data:/app/media
+      - static_data:/app/staticfiles
+    expose:
+      - "8000"
+    depends_on:
+      - redis
+
+  bot:
+    build:
+      context: .
+      dockerfile: docker/bot/Dockerfile
+    env_file:
+      - .env
+    environment:
+      DJANGO_DEBUG: "0"
+      SQLITE_PATH: /data/db.sqlite3
+      REDIS_URL: redis://redis:6379/0
+    volumes:
+      - db_data:/data
+      - media_data:/app/media
+    depends_on:
+      - backend
+      - redis
+
+  xp_flusher:
+    build:
+      context: .
+      dockerfile: docker/backend/Dockerfile
+    env_file:
+      - .env
+    environment:
+      DJANGO_DEBUG: "0"
+      SQLITE_PATH: /data/db.sqlite3
+      REDIS_URL: redis://redis:6379/0
+    command: sh -c 'while true; do python manage.py flush_xp_intervals; sleep 60; done'
+    volumes:
+      - db_data:/data
+      - media_data:/app/media
+    depends_on:
+      - backend
+      - redis
+
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/frontend/Dockerfile
+      args:
+        VITE_API_URL: /v1
+        VITE_DEV_MODE: "false"
+    expose:
+      - "80"
+
+  nginx:
+    image: nginx:1.27-alpine
+    volumes:
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - static_data:/var/www/static:ro
+      - media_data:/var/www/media:ro
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - backend
+      - frontend
+      - redis
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --save "" --appendonly no
+    expose:
+      - "6379"
+
+volumes:
+  db_data:
+  media_data:
+  static_data:
