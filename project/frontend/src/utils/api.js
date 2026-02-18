@@ -1,7 +1,7 @@
 import axios from "axios";
 import ENDPOINTS from "./endpoints";
 
-const RAW_API_BASE_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000/v1";
+const RAW_API_BASE_URL = "https://routr.swifttest.ru/";
 const API_BASE_URL = RAW_API_BASE_URL.replace(/\/+$/, "");
 
 const DEV_MODE = import.meta.env.VITE_DEV_MODE === "true";

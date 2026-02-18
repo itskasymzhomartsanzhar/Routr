@@ -59,6 +59,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     notification_quests = models.BooleanField("Уведомление о квестах", default=True)
     participation_in_ratings = models.BooleanField("Участие в рейтингах", default=True)
     balance_wheel = models.BooleanField("Только публичные привычки в колесе баланса", default=False)
+    payment_offer_accepted = models.BooleanField("Согласие с офертой", default=False)
 
     level = models.BigIntegerField("Уровень", default=1)
     xp = models.BigIntegerField("Опыт", default=0)
@@ -81,6 +82,11 @@ class User(AbstractBaseUser, PermissionsMixin):
     USERNAME_FIELD = "telegram_id"
     REQUIRED_FIELDS = []
 
+    class Meta:
+        verbose_name = "Пользователь"
+        verbose_name_plural = "Пользователи"
+        ordering = ("-date_joined",)
+
     @property
     def is_anonymous(self):
         return False
@@ -102,6 +108,11 @@ class Product(models.Model):
     duration_days = models.PositiveIntegerField("Длительность (дни)", default=0)
     is_active = models.BooleanField("Доступен", default=True)
     created_at = models.DateTimeField("Создан", auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Продукт"
+        verbose_name_plural = "Продукты"
+        ordering = ("-created_at",)
 
     def __str__(self):
         return self.name
@@ -133,6 +144,8 @@ class Payment(models.Model):
     updated_at = models.DateTimeField("Обновлен", auto_now=True)
 
     class Meta:
+        verbose_name = "Платеж"
+        verbose_name_plural = "Платежи"
         ordering = ("-created_at",)
 
     def __str__(self):
@@ -142,6 +155,11 @@ class Payment(models.Model):
 class Category(models.Model):
     name = models.CharField("Название", max_length=120, unique=True)
     created_at = models.DateTimeField("Создана", auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Категория"
+        verbose_name_plural = "Категории"
+        ordering = ("name",)
 
     def __str__(self):
         return self.name
@@ -195,6 +213,11 @@ class Habit(models.Model):
     created_at = models.DateTimeField("Создана", auto_now_add=True)
     updated_at = models.DateTimeField("Обновлена", auto_now=True)
 
+    class Meta:
+        verbose_name = "Привычка"
+        verbose_name_plural = "Привычки"
+        ordering = ("-created_at",)
+
     def __str__(self):
         return f"{self.title} ({self.owner_id})"
 
@@ -205,6 +228,9 @@ class HabitCompletion(models.Model):
     count = models.PositiveIntegerField("Количество", default=0)
 
     class Meta:
+        verbose_name = "Выполнение привычки"
+        verbose_name_plural = "Выполнения привычек"
+        ordering = ("-date", "-id")
         constraints = [
             models.UniqueConstraint(fields=["habit", "date"], name="unique_habit_completion"),
         ]
@@ -219,6 +245,9 @@ class HabitCopy(models.Model):
     created_at = models.DateTimeField("Создан", auto_now_add=True)
 
     class Meta:
+        verbose_name = "Копия публичной привычки"
+        verbose_name_plural = "Копии публичных привычек"
+        ordering = ("-created_at",)
         constraints = [
             models.UniqueConstraint(fields=["user", "source_habit"], name="unique_habit_copy"),
         ]
@@ -237,6 +266,9 @@ class HabitShare(models.Model):
     created_at = models.DateTimeField("Создан", auto_now_add=True)
 
     class Meta:
+        verbose_name = "Репост привычки"
+        verbose_name_plural = "Репосты привычек"
+        ordering = ("-created_at",)
         constraints = [
             models.UniqueConstraint(fields=["user", "habit"], name="unique_habit_share"),
         ]
@@ -253,6 +285,9 @@ class XpTransaction(models.Model):
     created_at = models.DateTimeField("Создан", auto_now_add=True)
 
     class Meta:
+        verbose_name = "XP-транзакция (неделя)"
+        verbose_name_plural = "XP-транзакции (неделя)"
+        ordering = ("-week_start", "-id")
         constraints = [
             models.UniqueConstraint(fields=["user", "week_start"], name="unique_user_week_xp"),
         ]
@@ -269,6 +304,9 @@ class XpIntervalTransaction(models.Model):
     created_at = models.DateTimeField("Создан", auto_now_add=True)
 
     class Meta:
+        verbose_name = "XP-транзакция (интервал)"
+        verbose_name_plural = "XP-транзакции (интервал)"
+        ordering = ("-period_start", "-id")
         constraints = [
             models.UniqueConstraint(fields=["user", "period_start"], name="unique_user_xp_interval"),
         ]
@@ -290,6 +328,11 @@ class Title(models.Model):
     privileges = models.JSONField("Привилегии", default=dict, blank=True)
     requires_premium = models.BooleanField("Требует Premium", default=False)
     order = models.PositiveIntegerField("Порядок", default=0)
+
+    class Meta:
+        verbose_name = "Должность"
+        verbose_name_plural = "Должности"
+        ordering = ("order", "id")
 
     def __str__(self):
         return self.name
@@ -329,6 +372,11 @@ class Quest(models.Model):
     order = models.PositiveIntegerField("Порядок", default=0)
     is_active = models.BooleanField("Активен", default=True)
 
+    class Meta:
+        verbose_name = "Квест"
+        verbose_name_plural = "Квесты"
+        ordering = ("group", "order", "id")
+
     def __str__(self):
         return self.title
 
@@ -340,6 +388,9 @@ class UserQuest(models.Model):
     xp_awarded = models.PositiveIntegerField("Выданный опыт", default=0)
 
     class Meta:
+        verbose_name = "Квест пользователя"
+        verbose_name_plural = "Квесты пользователей"
+        ordering = ("-completed_at", "-id")
         constraints = [
             models.UniqueConstraint(fields=["user", "quest"], name="unique_user_quest"),
         ]

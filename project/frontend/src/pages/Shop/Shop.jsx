@@ -12,6 +12,7 @@ const Shop = () => {
   const [payingProductId, setPayingProductId] = useState(null)
   const [paymentStatus, setPaymentStatus] = useState({ type: null, message: '' })
   const { bootstrap, setBootstrapData } = useAppData()
+  const botUsername = import.meta.env.VITE_TELEGRAM_BOT_USERNAME || 'testproject3_bot'
   const tabs = [
     { id: 'rub', label: '₽ RUB' },
     { id: 'stars', label: '⭐ Stars' }
@@ -59,9 +60,14 @@ const Shop = () => {
     return fixed.endsWith('.00') ? fixed.slice(0, -3) : fixed
   }
 
-  const openPaymentUrl = (url) => {
-    if (!url) return
+  const openBotBuyLink = (productId) => {
+    if (!productId) return
+    const url = `https://t.me/${botUsername}?start=buy_${productId}`
     const tgWebApp = window?.Telegram?.WebApp
+    if (tgWebApp?.openTelegramLink) {
+      tgWebApp.openTelegramLink(url)
+      return
+    }
     if (tgWebApp?.openLink) {
       tgWebApp.openLink(url)
       return
@@ -78,26 +84,12 @@ const Shop = () => {
     setPayingProductId(product.id)
     setPaymentStatus({ type: null, message: '' })
     try {
-      const result = await request.post(ENDPOINTS.payments.robokassaCreate, { product_id: product.id })
-      if (!result?.payment_url) {
-        setPaymentStatus({ type: 'error', message: 'Не удалось сформировать ссылку оплаты' })
-        return
-      }
-      openPaymentUrl(result.payment_url)
-      setPaymentStatus({ type: 'success', message: 'Ссылка оплаты открыта' })
+      openBotBuyLink(product.id)
+      setPaymentStatus({ type: 'success', message: 'Открываем бота для оплаты' })
     } catch (error) {
-      const detail = error?.response?.data?.detail
-      const stage = error?.response?.data?.error_stage
-      const providerStatus = error?.response?.data?.provider_status_code
-      const providerSnippet = error?.response?.data?.provider_response_snippet
-      const diagnostic = [stage ? `stage=${stage}` : null, providerStatus ? `status=${providerStatus}` : null]
-        .filter(Boolean)
-        .join(', ')
       setPaymentStatus({
         type: 'error',
-        message: detail
-          ? `${detail}${diagnostic ? ` (${diagnostic})` : ''}${providerSnippet ? `. ${providerSnippet}` : ''}`
-          : 'Ошибка создания платежа',
+        message: 'Не удалось открыть бота для оплаты',
       })
     } finally {
       setPayingProductId(null)

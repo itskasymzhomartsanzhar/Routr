@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 async def main():
     bot = Bot(
-        token="7871835011:AAEPFBwFvzB56aDgaOuJ49Yl80I2Vd8lacw",
+        token="8055384836:AAEQcRD8JpY44XpH9SGrf_XFzzvkNs29a6E",
         default=DefaultBotProperties(parse_mode=ParseMode.HTML)
     )
 

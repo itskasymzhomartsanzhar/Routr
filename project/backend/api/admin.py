@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.contrib.auth.models import Group
 from django.utils.html import format_html
 from django.utils import timezone
 from .models import (
@@ -15,6 +16,9 @@ from .models import (
     UserQuest,
     XpTransaction,
 )
+
+admin.site.unregister(Group)
+
 
 
 
@@ -123,12 +127,6 @@ class HabitCopyAdmin(admin.ModelAdmin):
     readonly_fields = ("created_at",)
 
 
-@admin.register(HabitShare)
-class HabitShareAdmin(admin.ModelAdmin):
-    list_display = ("habit", "user", "created_at")
-    list_filter = ("created_at",)
-    search_fields = ("habit__title", "user__username", "user__first_name")
-    readonly_fields = ("created_at",)
 
 
 @admin.register(Quest)
@@ -154,10 +152,19 @@ class UserQuestAdmin(admin.ModelAdmin):
     search_fields = ("user__username", "user__first_name", "quest__title")
     readonly_fields = ("completed_at",)
 
-
+"""
 @admin.register(XpTransaction)
 class XpTransactionAdmin(admin.ModelAdmin):
     list_display = ("user", "week_start", "week_end", "xp", "created_at")
     list_filter = ("week_start", "week_end")
     search_fields = ("user__username", "user__first_name", "user__telegram_id")
     readonly_fields = ("created_at",)
+
+
+@admin.register(HabitShare)
+class HabitShareAdmin(admin.ModelAdmin):
+    list_display = ("habit", "user", "created_at")
+    list_filter = ("created_at",)
+    search_fields = ("habit__title", "user__username", "user__first_name")
+    readonly_fields = ("created_at",)
+"""
