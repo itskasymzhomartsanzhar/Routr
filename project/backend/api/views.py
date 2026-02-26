@@ -139,19 +139,26 @@ def _apply_payment_product_effects(user: User, product: Product, now: datetime) 
     effects: dict = {}
     update_fields: list[str] = []
 
-    if "дополнительная привычка" in name:
-        count = _parse_name_count(name)
-        user.extra_habit_slots = int(user.extra_habit_slots or 0) + count
+    product_extra_habits = int(product.extra_habit_slots or 0)
+    if product_extra_habits <= 0 and "дополнительная привычка" in name:
+        product_extra_habits = _parse_name_count(name)
+
+    if product_extra_habits > 0:
+        user.extra_habit_slots = int(user.extra_habit_slots or 0) + product_extra_habits
         update_fields.append("extra_habit_slots")
-        effects["extra_habit_slots"] = count
+        effects["extra_habit_slots"] = product_extra_habits
 
-    if "щит" in name and "streak" in name:
-        count = _parse_name_count(name)
-        user.streak_shields = int(user.streak_shields or 0) + count
+    product_shields = int(product.streak_shields or 0)
+    if product_shields <= 0 and "щит" in name and "streak" in name:
+        product_shields = _parse_name_count(name)
+
+    if product_shields > 0:
+        user.streak_shields = int(user.streak_shields or 0) + product_shields
         update_fields.append("streak_shields")
-        effects["streak_shields"] = count
+        effects["streak_shields"] = product_shields
 
-    if "бустер xp" in name:
+    multiplier = float(product.xp_multiplier or 1.0)
+    if multiplier <= 1.0 and "бустер xp" in name:
         multiplier_match = re.search(r"[×x]\s*([0-9]+(?:[.,][0-9]+)?)", name)
         if multiplier_match:
             raw_multiplier = multiplier_match.group(1).replace(",", ".")
@@ -159,37 +166,29 @@ def _apply_payment_product_effects(user: User, product: Product, now: datetime) 
                 multiplier = float(raw_multiplier)
             except ValueError:
                 multiplier = 1.0
-        else:
-            multiplier = 1.0
 
-        duration_days = int(product.duration_days or 0)
-        if multiplier > 1 and duration_days > 0:
-            current_multiplier = float(user.xp_boost_multiplier or 1)
-            current_expires = user.xp_boost_expires_at
-            active = bool(current_expires and current_expires > now)
+    duration_days = int(product.duration_days or 0)
+    if multiplier > 1 and duration_days > 0:
+        current_multiplier = float(user.xp_boost_multiplier or 1)
+        current_expires = user.xp_boost_expires_at
+        active = bool(current_expires and current_expires > now)
+        base = current_expires if active else now
+        if multiplier >= current_multiplier:
+            user.xp_boost_multiplier = multiplier
+        user.xp_boost_expires_at = base + timedelta(days=duration_days)
+        update_fields.extend(["xp_boost_multiplier", "xp_boost_expires_at"])
+        effects["xp_boost_multiplier"] = float(user.xp_boost_multiplier)
+        effects["xp_boost_expires_at"] = user.xp_boost_expires_at.isoformat() if user.xp_boost_expires_at else None
 
-            if active:
-                base = current_expires
-            else:
-                base = now
+    is_premium_product = bool(product.is_premium)
+    if not is_premium_product and ("premium" in name or "премиум" in name):
+        is_premium_product = True
 
-            if multiplier >= current_multiplier:
-                user.xp_boost_multiplier = multiplier
-                user.xp_boost_expires_at = base + timedelta(days=duration_days)
-            else:
-                user.xp_boost_expires_at = base + timedelta(days=duration_days)
-
-            update_fields.extend(["xp_boost_multiplier", "xp_boost_expires_at"])
-            effects["xp_boost_multiplier"] = float(user.xp_boost_multiplier)
-            effects["xp_boost_expires_at"] = user.xp_boost_expires_at.isoformat() if user.xp_boost_expires_at else None
-
-    if "premium" in name or "премиум" in name:
-        duration_days = int(product.duration_days or 0)
-        if duration_days > 0:
-            base = user.premium_expiration if user.premium_expiration and user.premium_expiration > now else now
-            user.premium_expiration = base + timedelta(days=duration_days)
-            update_fields.append("premium_expiration")
-            effects["premium_days"] = duration_days
+    if is_premium_product and duration_days > 0:
+        base = user.premium_expiration if user.premium_expiration and user.premium_expiration > now else now
+        user.premium_expiration = base + timedelta(days=duration_days)
+        update_fields.append("premium_expiration")
+        effects["premium_days"] = duration_days
 
     if update_fields:
         user.save(update_fields=list(sorted(set(update_fields))))

@@ -110,6 +110,10 @@ class Product(models.Model):
     currency = models.CharField("Валюта", max_length=8, default="RUB")
     image = models.ImageField("Фото", upload_to="products/", blank=True, null=True)
     duration_days = models.PositiveIntegerField("Длительность (дни)", default=0)
+    is_premium = models.BooleanField("Премиум доступ", default=False)
+    xp_multiplier = models.DecimalField("Множитель XP", max_digits=4, decimal_places=2, default=1.0)
+    extra_habit_slots = models.PositiveIntegerField("Дополнительные слоты привычек", default=0)
+    streak_shields = models.PositiveIntegerField("Щиты стрика", default=0)
     is_active = models.BooleanField("Доступен", default=True)
     created_at = models.DateTimeField("Создан", auto_now_add=True)
 

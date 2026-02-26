@@ -69,6 +69,10 @@ class ProductSerializer(serializers.ModelSerializer):
             "currency",
             "image",
             "duration_days",
+            "is_premium",
+            "xp_multiplier",
+            "extra_habit_slots",
+            "streak_shields",
             "is_active",
             "created_at",
         )
