@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { auth } from '../utils/api';
-import { getTelegramInitData } from '../utils/telegram.js';
+import { getTelegramInitDataAsync } from '../utils/telegram.js';
 
 const AuthContext = createContext(undefined);
 
@@ -15,7 +15,7 @@ export const AuthProvider = ({ children }) => {
     let cancelled = false;
 
     const performTelegramLogin = async () => {
-      const initData = getTelegramInitData();
+      const initData = await getTelegramInitDataAsync();
       if (!initData) {
         throw new Error('Telegram initData is empty');
       }
@@ -89,7 +89,7 @@ export const AuthProvider = ({ children }) => {
       setLoading(true);
       setError(null);
 
-      const initData = getTelegramInitData();
+      const initData = await getTelegramInitDataAsync();
       if (!initData) {
         throw new Error('Telegram initData is empty');
       }

@@ -22,6 +22,16 @@ export const getTelegramInitData = () => {
   return ''
 }
 
+export const getTelegramInitDataAsync = async (timeoutMs = 2000, intervalMs = 100) => {
+  const startedAt = Date.now()
+  while (Date.now() - startedAt <= timeoutMs) {
+    const initData = getTelegramInitData()
+    if (initData) return initData
+    await new Promise((resolve) => setTimeout(resolve, intervalMs))
+  }
+  return ''
+}
+
 export const openTelegramLink = (url) => {
   const webApp = getTelegramWebApp()
   if (webApp?.openTelegramLink) {
