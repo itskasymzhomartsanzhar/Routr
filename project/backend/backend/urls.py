@@ -8,7 +8,7 @@ from django.urls import include, path
 admin.site.site_header = 'Трекер привычек Routr'
 admin.site.index_title = 'Администрирование Telegram Bot Mini App Routr'
 
-admin.site.site_url = 'https://t.me/testproject3_bot'
+admin.site.site_url = 'https://t.me/Routr_bot'
 
 
 urlpatterns = [

@@ -58,7 +58,7 @@ const PublicHabitModal = ({ isOpen, onClose, habit, author, onCopied }) => {
     if (!habit?.id || isSharing) return
     setIsSharing(true)
     setShareStatus({ type: null, message: '' })
-    const botUsername = import.meta.env.VITE_TELEGRAM_BOT_USERNAME || 'testproject3_bot'
+    const botUsername = import.meta.env.VITE_TELEGRAM_BOT_USERNAME || 'Routr_bot'
     const rawPayload = `habit_${String(habit.id)}`
     const shareLink = `https://t.me/${botUsername}?start=${encodePayload(rawPayload)}`
     try {
@@ -76,7 +76,7 @@ const PublicHabitModal = ({ isOpen, onClose, habit, author, onCopied }) => {
     if (!habit?.id || isSharing) return
     setIsSharing(true)
     setShareStatus({ type: null, message: '' })
-    const botUsername = import.meta.env.VITE_TELEGRAM_BOT_USERNAME || 'testproject3_bot'
+    const botUsername = import.meta.env.VITE_TELEGRAM_BOT_USERNAME || 'Routr_bot'
     const rawPayload = `habit_${String(habit.id)}`
     const shareLink = `https://t.me/${botUsername}?start=${encodePayload(rawPayload)}`
     try {

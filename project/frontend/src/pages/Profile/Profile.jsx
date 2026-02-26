@@ -333,7 +333,7 @@ const Profile = () => {
       return (name.includes('premium') || name.includes('премиум')) && String(item.currency || '').toUpperCase() === 'RUB'
     })
   })()
-  const botUsername = import.meta.env.VITE_TELEGRAM_BOT_USERNAME || 'testproject3_bot'
+  const botUsername = import.meta.env.VITE_TELEGRAM_BOT_USERNAME || 'Routr_bot'
 
   const handleShareProfile = async () => {
     if (!liveUser?.id) return
