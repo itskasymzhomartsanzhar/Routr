@@ -1,8 +1,8 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { auth } from '../utils/api';
+import { getTelegramInitData } from '../utils/telegram.js';
 
 const AuthContext = createContext(undefined);
-const FALLBACK_INIT_DATA = 'query_id=AAHvA60xAgAAAO8DrTEMamYv&user=%7B%22id%22%3A5128389615%2C%22first_name%22%3A%22Sanzhar%22%2C%22last_name%22%3A%22%22%2C%22username%22%3A%22swydk_dev%22%2C%22language_code%22%3A%22ru%22%2C%22is_premium%22%3Atrue%2C%22allows_write_to_pm%22%3Atrue%2C%22photo_url%22%3A%22https%3A%5C%2F%5C%2Ft.me%5C%2Fi%5C%2Fuserpic%5C%2F320%5C%2FAPs6KkcX_RZkiglsv5HWS_kXH4fcAk9YWVxHA6rpf4Mg82VDcsNBFE0G9Y4daf6J.svg%22%7D&auth_date=1765282380&signature=9PpJeq4FTLzaslDkcc0yW1jHg1ZiBi5nn8QJ-kiCY4l1bKKLoNgYlPIR5Q4_5zKggs_u2iEkEtzdd-UvFDZQCQ&hash=1e3aca18444f3913fe8bd0b8c846621f2656ffebce193be00d3fd5a71511bb3b';
 
 let authStartupPromise = null;
 
@@ -15,10 +15,11 @@ export const AuthProvider = ({ children }) => {
     let cancelled = false;
 
     const performTelegramLogin = async () => {
-      if (!FALLBACK_INIT_DATA) {
+      const initData = getTelegramInitData();
+      if (!initData) {
         throw new Error('Telegram initData is empty');
       }
-      const response = await auth.telegram(FALLBACK_INIT_DATA);
+      const response = await auth.telegram(initData);
       return response.user;
     };
 
@@ -88,11 +89,12 @@ export const AuthProvider = ({ children }) => {
       setLoading(true);
       setError(null);
 
-      if (!FALLBACK_INIT_DATA) {
+      const initData = getTelegramInitData();
+      if (!initData) {
         throw new Error('Telegram initData is empty');
       }
 
-      const response = await auth.telegram(FALLBACK_INIT_DATA);
+      const response = await auth.telegram(initData);
       setUser(response.user);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Authentication failed');

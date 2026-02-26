@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import placeholderAvatar from '../../../assets/placeholder.png'
 import ENDPOINTS from '../../../utils/endpoints.js'
 import { request } from '../../../utils/api.js'
+import { openTelegramShare } from '../../../utils/telegram.js'
 import './HabitDetailsModal.scss'
 
 const HabitDetailsModal = ({ isOpen, onClose, onEdit, habit, habits, statsDays = 30, currentUserId = null }) => {
@@ -249,7 +250,7 @@ const HabitDetailsModal = ({ isOpen, onClose, onEdit, habit, habits, statsDays =
 
     setIsShareCopying(true)
     setShareStatus({ type: null, message: '' })
-    const botUsername = import.meta.env.VITE_TELEGRAM_BOT_USERNAME || 'testproject3_bot'
+    const botUsername = import.meta.env.VITE_TELEGRAM_BOT_USERNAME || 'test_793741820183_bot'
     const rawPayload = `habit_${String(habit.id)}`
     const shareLink = `https://t.me/${botUsername}?start=${encodePayload(rawPayload)}`
 
@@ -259,6 +260,26 @@ const HabitDetailsModal = ({ isOpen, onClose, onEdit, habit, habits, statsDays =
       setShareStatus({ type: 'success', message: 'Ссылка на привычку скопирована' })
     } catch {
       setShareStatus({ type: 'error', message: 'Не удалось скопировать ссылку' })
+    } finally {
+      setIsShareCopying(false)
+    }
+  }
+
+  const handleShareToContacts = async () => {
+    if (!habit?.id || isShareCopying) return
+
+    setIsShareCopying(true)
+    setShareStatus({ type: null, message: '' })
+    const botUsername = import.meta.env.VITE_TELEGRAM_BOT_USERNAME || 'test_793741820183_bot'
+    const rawPayload = `habit_${String(habit.id)}`
+    const shareLink = `https://t.me/${botUsername}?start=${encodePayload(rawPayload)}`
+
+    try {
+      await request.post(ENDPOINTS.habits.share(habit.id))
+      openTelegramShare({ url: shareLink, text: 'Посмотри эту привычку' })
+      setShareStatus({ type: 'success', message: 'Ссылка отправлена через Telegram' })
+    } catch {
+      setShareStatus({ type: 'error', message: 'Не удалось поделиться' })
     } finally {
       setIsShareCopying(false)
     }
@@ -639,13 +660,13 @@ const HabitDetailsModal = ({ isOpen, onClose, onEdit, habit, habits, statsDays =
             <button
               className="habit-details-modal__share-primary"
               type="button"
-              onClick={handleShareCopyLink}
+              onClick={handleShareToContacts}
               disabled={isShareCopying}
             >
-              {isShareCopying ? 'Копируем...' : 'Скопировать ссылку'}
+              {isShareCopying ? 'Отправляем...' : 'Отправить в Telegram'}
             </button>
-            <button className="habit-details-modal__share-secondary" type="button" onClick={handleShareClose}>
-              Пригласить соучастника
+            <button className="habit-details-modal__share-secondary" type="button" onClick={handleShareCopyLink}>
+              Скопировать ссылку
             </button>
             {shareStatus.message && (
               <p

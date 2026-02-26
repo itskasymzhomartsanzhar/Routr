@@ -1,13 +1,13 @@
 import axios from "axios";
 import ENDPOINTS from "./endpoints";
 
-const RAW_API_BASE_URL = "https://routr.swifttest.ru/";
+const RAW_API_BASE_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000/v1/";
 const API_BASE_URL = RAW_API_BASE_URL.replace(/\/+$/, "");
 
 const DEV_MODE = import.meta.env.VITE_DEV_MODE === "true";
 const MOCK_USER = {
   id: 1,
-  telegram_id: 5128389615,
+  telegram_id: 0,
   username: "dev_user",
   first_name: "Dev",
   last_name: "User",
@@ -132,6 +132,24 @@ export const auth = {
       const detail = error?.response?.data?.detail;
       if (isLocalDev && status === 503 && typeof detail === "string" && detail.includes("BOT_TOKEN is not configured")) {
         console.log("🔧 DEV fallback: BOT_TOKEN is not configured, using mock auth");
+        setTokens("dev_access_token", "dev_refresh_token");
+        return {
+          access_token: "dev_access_token",
+          refresh_token: "dev_refresh_token",
+          user: MOCK_USER,
+        };
+      }
+      if (
+        isLocalDev &&
+        (status === 400 || status === 403) &&
+        typeof detail === "string" &&
+        (
+          detail.toLowerCase().includes("invalid hash") ||
+          detail.toLowerCase().includes("telegram signature mismatch") ||
+          detail.toLowerCase().includes("invalid init data")
+        )
+      ) {
+        console.log("🔧 DEV fallback: invalid Telegram initData signature, using mock auth");
         setTokens("dev_access_token", "dev_refresh_token");
         return {
           access_token: "dev_access_token",

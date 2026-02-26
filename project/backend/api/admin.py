@@ -152,7 +152,7 @@ class UserQuestAdmin(admin.ModelAdmin):
     search_fields = ("user__username", "user__first_name", "quest__title")
     readonly_fields = ("completed_at",)
 
-"""
+
 @admin.register(XpTransaction)
 class XpTransactionAdmin(admin.ModelAdmin):
     list_display = ("user", "week_start", "week_end", "xp", "created_at")
@@ -160,7 +160,7 @@ class XpTransactionAdmin(admin.ModelAdmin):
     search_fields = ("user__username", "user__first_name", "user__telegram_id")
     readonly_fields = ("created_at",)
 
-
+"""
 @admin.register(HabitShare)
 class HabitShareAdmin(admin.ModelAdmin):
     list_display = ("habit", "user", "created_at")

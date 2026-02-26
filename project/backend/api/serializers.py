@@ -31,6 +31,10 @@ class UserSerializer(serializers.ModelSerializer):
             "balance_wheel",
             "level",
             "xp",
+            "extra_habit_slots",
+            "streak_shields",
+            "xp_boost_multiplier",
+            "xp_boost_expires_at",
             "is_active",
             "date_joined",
         )
@@ -39,6 +43,10 @@ class UserSerializer(serializers.ModelSerializer):
             "premium_expiration",
             "level",
             "xp",
+            "extra_habit_slots",
+            "streak_shields",
+            "xp_boost_multiplier",
+            "xp_boost_expires_at",
             "date_joined",
         )
 

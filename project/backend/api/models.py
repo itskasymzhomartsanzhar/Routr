@@ -63,6 +63,10 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     level = models.BigIntegerField("Уровень", default=1)
     xp = models.BigIntegerField("Опыт", default=0)
+    extra_habit_slots = models.PositiveIntegerField("Дополнительные слоты привычек", default=0)
+    streak_shields = models.PositiveIntegerField("Щиты для стрика", default=0)
+    xp_boost_multiplier = models.DecimalField("Множитель XP", max_digits=4, decimal_places=2, default=1.0)
+    xp_boost_expires_at = models.DateTimeField("Дата окончания бустера XP", null=True, blank=True)
     current_title = models.ForeignKey(
         "Title",
         on_delete=models.SET_NULL,

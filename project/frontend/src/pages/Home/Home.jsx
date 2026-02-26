@@ -12,6 +12,7 @@ import { useAppData } from '../../contexts/AppDataContext.jsx'
 import ENDPOINTS from '../../utils/endpoints.js'
 import { api, request } from '../../utils/api.js'
 import { buildBalanceFromHabits } from '../../utils/balance.js'
+import { preloadProductImagesInBackground } from '../../utils/imagePreload.js'
 import './Home.scss'
 
 
@@ -144,6 +145,11 @@ const Home = () => {
       setHabits(filterHabitsByDate(mapped, selectedDate))
     }
   }, [isAuthenticated, bootstrap?.habits, selectedDate])
+
+  useEffect(() => {
+    if (!isAuthenticated) return
+    preloadProductImagesInBackground(bootstrap?.products)
+  }, [isAuthenticated, bootstrap?.products])
 
   useEffect(() => {
     if (!Array.isArray(bootstrap?.titles) || !bootstrap.titles.length) return

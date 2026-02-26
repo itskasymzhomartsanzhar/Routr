@@ -1,6 +1,3 @@
-"""
-Admin handlers for managing users and broadcasts (aiogram 3.x)
-"""
 
 import logging
 import asyncio
@@ -140,7 +137,7 @@ async def admin_broadcast_confirm(callback: CallbackQuery, state: FSMContext):
 
     data = await state.get_data()
     language = 'ru'
-    response = callback.data.split('_')[-1]  # 'broadcast_confirm_yes' -> 'yes'
+    response = callback.data.split('_')[-1]
 
     if response == 'no':
         await callback.message.edit_text(

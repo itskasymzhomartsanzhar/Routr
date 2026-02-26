@@ -3,6 +3,7 @@ import logging
 import re
 import asyncio
 from urllib.parse import urlencode
+from typing import Any
 
 from aiogram import Router
 from aiogram.types import Message, CallbackQuery
@@ -18,7 +19,7 @@ from telegram_bot.config import WEBAPP_URL
 logger = logging.getLogger(__name__)
 
 user_router = Router(name='user')
-OFFER_URL = "https://telegra.ph/PUBLICHNAYA-OFERTA-02-18-9"
+OFFER_URL = "https://telegra.ph/PUBLICHNAYA-OFERTA-02-25-8"
 
 
 def _extract_profile_id(payload: str) -> int | None:
@@ -77,10 +78,19 @@ def _decode_start_payload(args: str | None) -> str:
 
 async def _get_or_create_user(message: Message) -> tuple[User, bool]:
     telegram_user = message.from_user
-    photo_url = await _get_telegram_photo_url(message, telegram_user.id)
-    user = await User.objects.filter(telegram_id=telegram_user.id).afirst()
-    created = False
+    return await _upsert_user_from_telegram(telegram_user, message.bot)
 
+
+async def _resolve_novice_title() -> Title | None:
+    novice_title = await Title.objects.filter(code='novice').afirst()
+    if novice_title:
+        return novice_title
+    return await Title.objects.filter(name='Новичок').order_by('order', 'id').afirst()
+
+
+async def _upsert_user_from_telegram(telegram_user: Any, bot: Any) -> tuple[User, bool]:
+    user = await User.objects.filter(telegram_id=telegram_user.id).afirst()
+    photo_url = await _get_telegram_photo_url(telegram_user, bot)
     if user:
         changed = False
         first_name = telegram_user.first_name or ''
@@ -102,12 +112,9 @@ async def _get_or_create_user(message: Message) -> tuple[User, bool]:
             changed = True
         if changed:
             await user.asave()
-        return user, created
+        return user, False
 
-    novice_title = await Title.objects.filter(code='novice').afirst()
-    if not novice_title:
-        novice_title = await Title.objects.filter(name='Новичок').order_by('order', 'id').afirst()
-
+    novice_title = await _resolve_novice_title()
     user = await User.objects.acreate(
         telegram_id=telegram_user.id,
         username=telegram_user.username or '',
@@ -117,47 +124,31 @@ async def _get_or_create_user(message: Message) -> tuple[User, bool]:
         is_active=True,
         current_title=novice_title,
     )
-    created = True
-    return user, created
+    return user, True
 
 
-async def _get_telegram_photo_url(message: Message, telegram_id: int) -> str:
-    direct = getattr(message.from_user, 'photo_url', '') or ''
+async def _get_telegram_photo_url(telegram_user: Any, bot: Any) -> str:
+    direct = getattr(telegram_user, 'photo_url', '') or ''
     if direct:
         return direct
     try:
-        photos = await message.bot.get_user_profile_photos(user_id=telegram_id, limit=1)
+        photos = await bot.get_user_profile_photos(user_id=telegram_user.id, limit=1)
         if not photos or not photos.photos:
             return ''
-        # First album, max resolution photo in album.
         best = photos.photos[0][-1]
-        file = await message.bot.get_file(best.file_id)
+        file = await bot.get_file(best.file_id)
         file_path = getattr(file, 'file_path', '') or ''
         if not file_path:
             return ''
-        return f"https://api.telegram.org/file/bot{message.bot.token}/{file_path}"
+        return f"https://api.telegram.org/file/bot{bot.token}/{file_path}"
     except Exception as exc:
-        logger.warning("Failed to fetch Telegram profile photo for user=%s: %s", telegram_id, exc)
+        logger.warning("Failed to fetch Telegram profile photo for user=%s: %s", telegram_user.id, exc)
         return ''
 
 
 async def _get_or_create_user_by_callback(callback: CallbackQuery) -> User:
-    telegram_user = callback.from_user
-    user = await User.objects.filter(telegram_id=telegram_user.id).afirst()
-    if user:
-        return user
-    novice_title = await Title.objects.filter(code='novice').afirst()
-    if not novice_title:
-        novice_title = await Title.objects.filter(name='Новичок').order_by('order', 'id').afirst()
-    return await User.objects.acreate(
-        telegram_id=telegram_user.id,
-        username=telegram_user.username or '',
-        first_name=telegram_user.first_name or '',
-        photo_url='',
-        language_code='ru',
-        is_active=True,
-        current_title=novice_title,
-    )
+    user, _created = await _upsert_user_from_telegram(callback.from_user, callback.bot)
+    return user
 
 
 async def _get_rub_product(product_id: int | None) -> Product | None:
@@ -193,7 +184,7 @@ def _offer_keyboard(product_id: int):
 
 def _payment_keyboard(product: Product, payment_url: str):
     kb = InlineKeyboardBuilder()
-    kb.button(text=f"Оплатить {product.name}", url=payment_url)
+    kb.button(text="Оплатить", url=payment_url)
     return kb.as_markup()
 
 
@@ -208,6 +199,7 @@ async def _send_offer_message(message: Message, product: Product):
 
 
 async def _send_payment_message(message: Message, user: User, product: Product):
+    safe_name = re.sub(r"<[^>]+>", "", product.name or "").strip()
     try:
         payment_url = await _create_payment_url(user, product)
     except RobokassaError as exc:
@@ -218,7 +210,7 @@ async def _send_payment_message(message: Message, user: User, product: Product):
         return
 
     await message.answer(
-        f"Оплата: {product.name}\nСумма: {product.price} RUB",
+        f"Оплата: {safe_name}\nСумма: {product.price} RUB",
         reply_markup=_payment_keyboard(product, payment_url),
     )
 
@@ -307,6 +299,7 @@ async def offer_accept_callback(callback: CallbackQuery):
     if not product:
         await callback.message.answer("RUB-продукт для оплаты не найден.")
         return
+    safe_name = re.sub(r"<[^>]+>", "", product.name or "").strip()
 
     if not user.payment_offer_accepted:
         user.payment_offer_accepted = True
@@ -322,7 +315,7 @@ async def offer_accept_callback(callback: CallbackQuery):
         return
 
     await callback.message.edit_text(
-        f"Оплата: {product.name}\nСумма: {product.price} RUB\n\nОплатите по ссылке ниже:",
+        f"Оплата: {safe_name}\nСумма: {product.price} RUB\n\nОплатите по ссылке ниже:",
         reply_markup=_payment_keyboard(product, payment_url),
     )
 

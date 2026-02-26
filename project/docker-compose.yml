@@ -14,9 +14,10 @@ services:
       - media_data:/app/media
       - static_data:/app/staticfiles
     ports:
-      - "8100:8000" 
+      - "8100:8000"
     depends_on:
       - redis
+      - postgres
 
   bot:
     build:
@@ -34,6 +35,7 @@ services:
     depends_on:
       - backend
       - redis
+      - postgres
 
   xp_flusher:
     build:
@@ -48,10 +50,11 @@ services:
     command: sh -c 'while true; do python manage.py flush_xp_intervals; sleep 60; done'
     volumes:
       - db_data:/data
-      - media_data:/app/media
+      - media_data:/app/media 
     depends_on:
       - backend
       - redis
+      - postgres
 
   frontend:
     build:
@@ -61,7 +64,7 @@ services:
         VITE_API_URL: /v1
         VITE_DEV_MODE: "false"
     ports:
-      - "8100:8000" 
+      - "3100:80"
 
 
 
@@ -71,7 +74,19 @@ services:
     expose:
       - "6379"
 
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-routr}
+      POSTGRES_USER: ${POSTGRES_USER:-routr}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-routr}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+
 volumes:
   db_data:
   media_data:
   static_data:
+  pg_data:

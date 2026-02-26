@@ -12,7 +12,6 @@ const Shop = () => {
   const [payingProductId, setPayingProductId] = useState(null)
   const [paymentStatus, setPaymentStatus] = useState({ type: null, message: '' })
   const { bootstrap, setBootstrapData } = useAppData()
-  const botUsername = import.meta.env.VITE_TELEGRAM_BOT_USERNAME || 'testproject3_bot'
   const tabs = [
     { id: 'rub', label: '₽ RUB' },
     { id: 'stars', label: '⭐ Stars' }
@@ -60,21 +59,6 @@ const Shop = () => {
     return fixed.endsWith('.00') ? fixed.slice(0, -3) : fixed
   }
 
-  const openBotBuyLink = (productId) => {
-    if (!productId) return
-    const url = `https://t.me/${botUsername}?start=buy_${productId}`
-    const tgWebApp = window?.Telegram?.WebApp
-    if (tgWebApp?.openTelegramLink) {
-      tgWebApp.openTelegramLink(url)
-      return
-    }
-    if (tgWebApp?.openLink) {
-      tgWebApp.openLink(url)
-      return
-    }
-    window.open(url, '_blank', 'noopener,noreferrer')
-  }
-
   const handleBuy = async (product) => {
     if (activeCurrency !== 'rub') {
       setPaymentStatus({ type: 'error', message: 'Для Stars оплата через Robokassa недоступна' })
@@ -84,12 +68,16 @@ const Shop = () => {
     setPayingProductId(product.id)
     setPaymentStatus({ type: null, message: '' })
     try {
-      openBotBuyLink(product.id)
-      setPaymentStatus({ type: 'success', message: 'Открываем бота для оплаты' })
+      const result = await request.post(ENDPOINTS.payments.robokassaSendMessage, { product_id: product.id })
+      if (result?.status === 'offer_sent') {
+        setPaymentStatus({ type: 'success', message: 'Сообщение для оплаты отправлено в Telegram' })
+      } else {
+        setPaymentStatus({ type: 'success', message: 'Сообщение для оплаты отправлено в Telegram' })
+      }
     } catch (error) {
       setPaymentStatus({
         type: 'error',
-        message: 'Не удалось открыть бота для оплаты',
+        message: error?.response?.data?.detail || 'Не удалось отправить сообщение в Telegram',
       })
     } finally {
       setPayingProductId(null)
@@ -126,7 +114,7 @@ const Shop = () => {
                 onClick={() => handleBuy(product)}
                 disabled={payingProductId === product.id}
               >
-                {payingProductId === product.id ? 'Открываем...' : `${formatPrice(product.price)} ${currencySymbol}`}
+                {payingProductId === product.id ? 'Оформление...' : `${formatPrice(product.price)} ${currencySymbol}`}
               </button>
             </div>
           ))}

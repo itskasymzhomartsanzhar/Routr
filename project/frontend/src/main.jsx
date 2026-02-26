@@ -6,6 +6,9 @@ import { PipProvider } from './contexts/PipContext';
 import { AppDataProvider } from './contexts/AppDataContext';
 import './styles/global.scss';
 import App from './App';
+import { initTelegramWebApp } from './utils/telegram.js';
+
+initTelegramWebApp();
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

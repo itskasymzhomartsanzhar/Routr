@@ -5,6 +5,7 @@ import logging
 import math
 import re
 import uuid
+import requests
 from datetime import date, datetime, time, timedelta, timezone as dt_timezone
 from decimal import Decimal, InvalidOperation
 from difflib import SequenceMatcher
@@ -14,7 +15,7 @@ from django.conf import settings
 from django.core.cache import cache
 from django.db import transaction
 from django.db.models import Case, Count, Exists, F, IntegerField, OuterRef, Prefetch, Q, Sum, When
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseRedirect
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django_redis import get_redis_connection
@@ -23,9 +24,9 @@ from rest_framework.decorators import action, api_view, authentication_classes, 
 from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-from rest_framework_simplejwt.tokens import RefreshToken  # type: ignore
+from rest_framework_simplejwt.tokens import RefreshToken
 
-from backend.webapp_auth import WebAppAuth, AuthError
+from backend.webapp_auth import WebAppAuth, AuthError as WebAppAuthError
 from .models import (
     Category,
     Habit,
@@ -54,6 +55,7 @@ from .robokassa import (
     create_invoice_link_with_meta,
     format_out_sum,
     verify_result_signature,
+    verify_success_signature,
 )
 
 logger = logging.getLogger(__name__)
@@ -80,6 +82,118 @@ XP_BUCKET_KEY_RE = re.compile(r"^xp:bucket:3h:(\d+)$")
 XP_PENDING_PERIOD_BUCKET_PREFIX = "xp:pending:{range}:bucket:"
 XP_PENDING_PERIOD_INDEX_KEY = "xp:pending:{range}:index"
 XP_PENDING_USER_TOTAL_KEY = "xp:pending:user:{user_id}:total"
+
+
+def _notify_telegram_payment_success(*, telegram_id: int | None, product_name: str) -> None:
+    if not telegram_id or not settings.BOT_TOKEN:
+        return
+    url = f"https://api.telegram.org/bot{settings.BOT_TOKEN}/sendMessage"
+    payload = {
+        "chat_id": int(telegram_id),
+        "text": f"Оплата успешно подтверждена.\nПакет: {product_name}",
+    }
+    try:
+        requests.post(url, json=payload, timeout=5)
+    except Exception as exc:
+        logger.warning(
+            "Failed to send payment success Telegram message: telegram_id=%s error=%s",
+            telegram_id,
+            exc,
+        )
+
+
+def _telegram_send_message(*, chat_id: int, text: str, reply_markup: dict | None = None) -> dict:
+    if not settings.BOT_TOKEN:
+        raise ValidationError({"detail": "BOT_TOKEN is not configured"})
+    url = f"https://api.telegram.org/bot{settings.BOT_TOKEN}/sendMessage"
+    payload: dict = {
+        "chat_id": int(chat_id),
+        "text": text,
+    }
+    if reply_markup:
+        payload["reply_markup"] = reply_markup
+    try:
+        response = requests.post(url, json=payload, timeout=8)
+        data = response.json() if response.content else {}
+    except Exception as exc:
+        raise ValidationError({"detail": f"Failed to send Telegram message: {exc}"}) from exc
+    if not response.ok or not data.get("ok"):
+        description = data.get("description") or f"HTTP {response.status_code}"
+        raise ValidationError({"detail": f"Telegram sendMessage failed: {description}"})
+    return data
+
+
+def _parse_name_count(name: str) -> int:
+    match = re.search(r"(\d+)\s*шт", name, re.IGNORECASE)
+    if match:
+        return max(int(match.group(1)), 1)
+    return 1
+
+
+def _normalize_product_name(name: str) -> str:
+    return re.sub(r"<[^>]+>", "", name or "").strip()
+
+
+def _apply_payment_product_effects(user: User, product: Product, now: datetime) -> dict:
+    name = _normalize_product_name(product.name).lower()
+    effects: dict = {}
+    update_fields: list[str] = []
+
+    if "дополнительная привычка" in name:
+        count = _parse_name_count(name)
+        user.extra_habit_slots = int(user.extra_habit_slots or 0) + count
+        update_fields.append("extra_habit_slots")
+        effects["extra_habit_slots"] = count
+
+    if "щит" in name and "streak" in name:
+        count = _parse_name_count(name)
+        user.streak_shields = int(user.streak_shields or 0) + count
+        update_fields.append("streak_shields")
+        effects["streak_shields"] = count
+
+    if "бустер xp" in name:
+        multiplier_match = re.search(r"[×x]\s*([0-9]+(?:[.,][0-9]+)?)", name)
+        if multiplier_match:
+            raw_multiplier = multiplier_match.group(1).replace(",", ".")
+            try:
+                multiplier = float(raw_multiplier)
+            except ValueError:
+                multiplier = 1.0
+        else:
+            multiplier = 1.0
+
+        duration_days = int(product.duration_days or 0)
+        if multiplier > 1 and duration_days > 0:
+            current_multiplier = float(user.xp_boost_multiplier or 1)
+            current_expires = user.xp_boost_expires_at
+            active = bool(current_expires and current_expires > now)
+
+            if active:
+                base = current_expires
+            else:
+                base = now
+
+            if multiplier >= current_multiplier:
+                user.xp_boost_multiplier = multiplier
+                user.xp_boost_expires_at = base + timedelta(days=duration_days)
+            else:
+                user.xp_boost_expires_at = base + timedelta(days=duration_days)
+
+            update_fields.extend(["xp_boost_multiplier", "xp_boost_expires_at"])
+            effects["xp_boost_multiplier"] = float(user.xp_boost_multiplier)
+            effects["xp_boost_expires_at"] = user.xp_boost_expires_at.isoformat() if user.xp_boost_expires_at else None
+
+    if "premium" in name or "премиум" in name:
+        duration_days = int(product.duration_days or 0)
+        if duration_days > 0:
+            base = user.premium_expiration if user.premium_expiration and user.premium_expiration > now else now
+            user.premium_expiration = base + timedelta(days=duration_days)
+            update_fields.append("premium_expiration")
+            effects["premium_days"] = duration_days
+
+    if update_fields:
+        user.save(update_fields=list(sorted(set(update_fields))))
+    return effects
 
 
 def _get_week_start(target_date: date) -> date:
@@ -288,6 +402,8 @@ def _rebuild_habit_stats(habit: Habit, today: date | None = None) -> None:
     current = 0
     best = 0
     last_completed = None
+    user = habit.owner
+    used_shields = 0
     if start_date:
         cursor = start_date
         goal = max(habit.goal, 1)
@@ -302,6 +418,13 @@ def _rebuild_habit_stats(habit: Habit, today: date | None = None) -> None:
                 last_completed = cursor
                 best = max(best, current)
             else:
+                if current > 0 and last_completed and cursor == last_completed + timedelta(days=1):
+                    available = int(user.streak_shields or 0) - used_shields
+                    if available > 0:
+                        used_shields += 1
+                        last_completed = cursor
+                        cursor += timedelta(days=1)
+                        continue
                 current = 0
             cursor += timedelta(days=1)
 
@@ -317,6 +440,9 @@ def _rebuild_habit_stats(habit: Habit, today: date | None = None) -> None:
         "streak_last_date",
         "stats_rollup_date",
     ])
+    if used_shields:
+        user.streak_shields = max(int(user.streak_shields or 0) - used_shields, 0)
+        user.save(update_fields=["streak_shields"])
 
 
 def _rollup_habit_stats(habit: Habit, today: date | None = None) -> None:
@@ -342,6 +468,8 @@ def _rollup_habit_stats(habit: Habit, today: date | None = None) -> None:
     current = int(habit.streak_current or 0)
     best = int(habit.streak_best or 0)
     last_completed = habit.streak_last_date
+    user = habit.owner
+    used_shields = 0
     goal = max(habit.goal, 1)
     cursor = start_date
     while cursor <= yesterday:
@@ -355,6 +483,13 @@ def _rollup_habit_stats(habit: Habit, today: date | None = None) -> None:
             last_completed = cursor
             best = max(best, current)
         else:
+            if current > 0 and last_completed and cursor == last_completed + timedelta(days=1):
+                available = int(user.streak_shields or 0) - used_shields
+                if available > 0:
+                    used_shields += 1
+                    last_completed = cursor
+                    cursor += timedelta(days=1)
+                    continue
             current = 0
         cursor += timedelta(days=1)
 
@@ -370,6 +505,9 @@ def _rollup_habit_stats(habit: Habit, today: date | None = None) -> None:
         "streak_last_date",
         "stats_rollup_date",
     ])
+    if used_shields:
+        user.streak_shields = max(int(user.streak_shields or 0) - used_shields, 0)
+        user.save(update_fields=["streak_shields"])
 
 
 def _rollup_user_habit_stats(user: User, today: date | None = None) -> None:
@@ -707,8 +845,17 @@ def _award_xp(user: User, base_xp: int, target_date: date, habits_count: int) ->
     if base_applied <= 0:
         return 0
 
-    is_premium = bool(user.premium_expiration and user.premium_expiration > timezone.now())
-    awarded = int(round(base_applied * PREMIUM_XP_MULTIPLIER)) if is_premium else base_applied
+    now = timezone.now()
+    is_premium = bool(user.premium_expiration and user.premium_expiration > now)
+    boost_multiplier = 1.0
+    if user.xp_boost_expires_at and user.xp_boost_expires_at > now:
+        boost_multiplier = float(user.xp_boost_multiplier or 1.0)
+
+    awarded = base_applied
+    if is_premium:
+        awarded = int(round(awarded * PREMIUM_XP_MULTIPLIER))
+    if boost_multiplier > 1:
+        awarded = int(round(awarded * boost_multiplier))
 
     grant_key = f"xp:grant:{uuid.uuid4()}"
     grant_payload = {
@@ -1082,7 +1229,7 @@ def telegram_auth(request):
             'created': created
         }, status=status.HTTP_200_OK)
 
-    except AuthError as e:
+    except (AuthError, WebAppAuthError) as e:
         return Response({
             'error': e.message,
             'detail': e.detail
@@ -1581,6 +1728,142 @@ def create_robokassa_payment(request):
     )
 
 
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def send_robokassa_payment_message(request):
+    product_id = request.data.get("product_id")
+    if not product_id:
+        raise ValidationError({"product_id": "This field is required."})
+    try:
+        product_id = int(product_id)
+    except (TypeError, ValueError):
+        raise ValidationError({"product_id": "Must be an integer."})
+
+    product = Product.objects.filter(id=product_id, is_active=True, currency__iexact="RUB").first()
+    if not product:
+        return Response({"detail": "RUB product not found"}, status=status.HTTP_404_NOT_FOUND)
+
+    user = request.user
+    if not user.telegram_id:
+        return Response(
+            {"detail": "Telegram account is not linked. Start the bot first."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if not user.payment_offer_accepted:
+        reply_markup = {
+            "inline_keyboard": [
+                [{"text": "Оферта", "url": "https://telegra.ph/PUBLICHNAYA-OFERTA-02-25-8"}],
+                [{"text": "Согласиться", "callback_data": f"offer_accept:{product.id}"}],
+            ]
+        }
+        _telegram_send_message(
+            chat_id=int(user.telegram_id),
+            text="Перед оплатой ознакомьтесь с публичной офертой.\nНажмите «Согласиться», чтобы продолжить.",
+            reply_markup=reply_markup,
+        )
+        return Response({"status": "offer_sent"})
+
+    missing = []
+    if not settings.ROBOKASSA_MERCHANT_LOGIN:
+        missing.append("ROBOKASSA_MERCHANT_LOGIN")
+    if not settings.ROBOKASSA_PASSWORD1:
+        missing.append("ROBOKASSA_PASSWORD1")
+    if not settings.ROBOKASSA_PASSWORD2:
+        missing.append("ROBOKASSA_PASSWORD2")
+    if missing:
+        return Response(
+            {"detail": f"Robokassa is not configured. Missing: {', '.join(missing)}"},
+            status=status.HTTP_503_SERVICE_UNAVAILABLE,
+        )
+
+    with transaction.atomic():
+        payment = Payment.objects.create(
+            user=user,
+            product=product,
+            provider=Payment.PROVIDER_ROBOKASSA,
+            invoice_id=0,
+            amount=product.price,
+            currency="RUB",
+            status=Payment.STATUS_PENDING,
+            metadata={"source": "api_bot_message"},
+        )
+        payment.invoice_id = payment.id
+        payment.save(update_fields=["invoice_id"])
+
+    try:
+        payment_url, provider_meta = create_invoice_link_with_meta(payment)
+        payment.metadata = {
+            **(payment.metadata or {}),
+            "provider_meta": provider_meta,
+        }
+        payment.save(update_fields=["metadata", "updated_at"])
+    except RobokassaError as exc:
+        logger.exception(
+            "Robokassa bot-message payment creation failed: payment_id=%s invoice_id=%s user_id=%s product_id=%s",
+            payment.id,
+            payment.invoice_id,
+            request.user.id,
+            product.id,
+        )
+        payment.status = Payment.STATUS_FAILED
+        payment.metadata = {
+            **(payment.metadata or {}),
+            "error": str(exc),
+            "error_stage": exc.stage,
+            "provider_status_code": exc.status_code,
+            "provider_response_snippet": exc.response_snippet,
+        }
+        payment.save(update_fields=["status", "metadata", "updated_at"])
+        return Response(
+            {
+                "detail": str(exc),
+                "error_stage": exc.stage,
+                "provider_status_code": exc.status_code,
+                "provider_response_snippet": exc.response_snippet,
+                "payment_id": payment.id,
+                "invoice_id": payment.invoice_id,
+            },
+            status=status.HTTP_502_BAD_GATEWAY,
+        )
+    except Exception as exc:
+        logger.exception(
+            "Unexpected bot-message payment creation error: payment_id=%s invoice_id=%s user_id=%s product_id=%s",
+            payment.id,
+            payment.invoice_id,
+            request.user.id,
+            product.id,
+        )
+        payment.status = Payment.STATUS_FAILED
+        payment.metadata = {
+            **(payment.metadata or {}),
+            "error": str(exc),
+            "error_stage": "unexpected",
+        }
+        payment.save(update_fields=["status", "metadata", "updated_at"])
+        return Response(
+            {
+                "detail": "Unexpected payment creation error",
+                "payment_id": payment.id,
+                "invoice_id": payment.invoice_id,
+            },
+            status=status.HTTP_502_BAD_GATEWAY,
+        )
+
+    safe_name = re.sub(r"<[^>]+>", "", (product.name or "")).strip()
+    reply_markup = {
+        "inline_keyboard": [
+            [{"text": "Оплатить", "url": payment_url}],
+        ]
+    }
+    _telegram_send_message(
+        chat_id=int(user.telegram_id),
+        text=f"Оплата: {safe_name}\nСумма: {product.price} RUB\n\nОплатите по кнопке ниже.",
+        reply_markup=reply_markup,
+    )
+    return Response({"status": "payment_sent", "invoice_id": payment.invoice_id, "payment_id": payment.id})
+
+
 @csrf_exempt
 @api_view(["POST"])
 @authentication_classes([])
@@ -1618,17 +1901,104 @@ def robokassa_result_webhook(request):
 
         user = payment.user
         now = timezone.now()
-        if payment.product.duration_days > 0:
-            base = user.premium_expiration if user.premium_expiration and user.premium_expiration > now else now
-            user.premium_expiration = base + timedelta(days=payment.product.duration_days)
-            user.save(update_fields=["premium_expiration"])
+        effects = _apply_payment_product_effects(user, payment.product, now)
 
         payment.status = Payment.STATUS_PAID
         payment.paid_at = now
-        payment.metadata = {**(payment.metadata or {}), "webhook_payload": payload}
+        payment.metadata = {
+            **(payment.metadata or {}),
+            "webhook_payload": payload,
+            "applied_effects": effects,
+        }
         payment.save(update_fields=["status", "paid_at", "metadata", "updated_at"])
+        transaction.on_commit(
+            lambda: _notify_telegram_payment_success(
+                telegram_id=user.telegram_id,
+                product_name=payment.product.name,
+            )
+        )
 
     return HttpResponse(f"OK{inv_id}", content_type="text/plain; charset=utf-8")
+
+
+@csrf_exempt
+@api_view(["GET", "POST"])
+@authentication_classes([])
+@permission_classes([AllowAny])
+def robokassa_success(request):
+    payload = dict(request.data or request.query_params or {})
+    if not verify_success_signature(payload):
+        return HttpResponse("bad sign", status=400, content_type="text/plain; charset=utf-8")
+
+    out_sum_raw = str(payload.get("OutSum", "")).strip()
+    inv_id_raw = str(payload.get("InvId", "")).strip()
+    if not out_sum_raw or not inv_id_raw:
+        return HttpResponse("bad request", status=400, content_type="text/plain; charset=utf-8")
+
+    try:
+        inv_id = int(inv_id_raw)
+        out_sum = Decimal(out_sum_raw).quantize(Decimal("0.01"))
+    except (ValueError, InvalidOperation):
+        return HttpResponse("bad request", status=400, content_type="text/plain; charset=utf-8")
+
+    with transaction.atomic():
+        payment = Payment.objects.select_for_update().select_related("user", "product").filter(invoice_id=inv_id).first()
+        if not payment:
+            return HttpResponse("invoice not found", status=404, content_type="text/plain; charset=utf-8")
+
+        expected_sum = Decimal(payment.amount).quantize(Decimal("0.01"))
+        if out_sum != expected_sum:
+            payment.status = Payment.STATUS_FAILED
+            payment.metadata = {**(payment.metadata or {}), "success_payload": payload, "error": "sum_mismatch"}
+            payment.save(update_fields=["status", "metadata", "updated_at"])
+            return HttpResponse("sum mismatch", status=400, content_type="text/plain; charset=utf-8")
+
+        if payment.status != Payment.STATUS_PAID:
+            user = payment.user
+            now = timezone.now()
+            effects = _apply_payment_product_effects(user, payment.product, now)
+            payment.status = Payment.STATUS_PAID
+            payment.paid_at = now
+            payment.metadata = {
+                **(payment.metadata or {}),
+                "success_payload": payload,
+                "applied_effects": effects,
+            }
+            payment.save(update_fields=["status", "paid_at", "metadata", "updated_at"])
+            transaction.on_commit(
+                lambda: _notify_telegram_payment_success(
+                    telegram_id=user.telegram_id,
+                    product_name=payment.product.name,
+                )
+            )
+
+    return HttpResponseRedirect("https://t.me/Routr_bot")
+
+
+@csrf_exempt
+@api_view(["GET", "POST"])
+@authentication_classes([])
+@permission_classes([AllowAny])
+def robokassa_fail(request):
+    payload = dict(request.data or request.query_params or {})
+    out_sum_raw = str(payload.get("OutSum", "")).strip()
+    inv_id_raw = str(payload.get("InvId", "")).strip()
+    if not out_sum_raw or not inv_id_raw:
+        return HttpResponseRedirect("https://t.me/Routr_bot")
+
+    try:
+        inv_id = int(inv_id_raw)
+    except (ValueError, InvalidOperation):
+        return HttpResponseRedirect("https://t.me/Routr_bot")
+
+    with transaction.atomic():
+        payment = Payment.objects.select_for_update().filter(invoice_id=inv_id).first()
+        if payment and payment.status != Payment.STATUS_PAID:
+            payment.status = Payment.STATUS_FAILED
+            payment.metadata = {**(payment.metadata or {}), "fail_payload": payload}
+            payment.save(update_fields=["status", "metadata", "updated_at"])
+
+    return HttpResponseRedirect("https://t.me/Routr_bot")
 
 
 class HabitViewSet(viewsets.ModelViewSet):
@@ -1645,8 +2015,11 @@ class HabitViewSet(viewsets.ModelViewSet):
     def _get_habit_limits(self, user: User) -> dict:
         title = _resolve_title(user)
         privileges = title.privileges if title else {}
+        max_total = self._parse_limit(privileges.get("total_habits"))
+        if max_total is not None:
+            max_total += int(user.extra_habit_slots or 0)
         return {
-            "max_total": self._parse_limit(privileges.get("total_habits")),
+            "max_total": max_total,
             "max_public": self._parse_limit(privileges.get("public_habits")),
             "public_join_only": bool(privileges.get("public_join_only", False)),
         }

@@ -4,6 +4,7 @@ import { useAppData } from '../../../contexts/AppDataContext.jsx'
 import ENDPOINTS from '../../../utils/endpoints.js'
 import { request } from '../../../utils/api.js'
 import { buildBalanceFromHabits } from '../../../utils/balance.js'
+import { openTelegramShare } from '../../../utils/telegram.js'
 import './PublicHabitModal.scss'
 
 const PublicHabitModal = ({ isOpen, onClose, habit, author, onCopied }) => {
@@ -12,6 +13,8 @@ const PublicHabitModal = ({ isOpen, onClose, habit, author, onCopied }) => {
   const [isShareOpen, setIsShareOpen] = useState(false)
   const [isCopying, setIsCopying] = useState(false)
   const [copyStatus, setCopyStatus] = useState({ type: null, message: '' })
+  const [isSharing, setIsSharing] = useState(false)
+  const [shareStatus, setShareStatus] = useState({ type: null, message: '' })
 
   useEffect(() => {
     if (isOpen) {
@@ -42,6 +45,61 @@ const PublicHabitModal = ({ isOpen, onClose, habit, author, onCopied }) => {
 
   const handleShareClose = () => {
     setIsShareOpen(false)
+  }
+
+  const encodePayload = (rawPayload) => (
+    btoa(unescape(encodeURIComponent(rawPayload)))
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/g, '')
+  )
+
+  const handleShareToContacts = async () => {
+    if (!habit?.id || isSharing) return
+    setIsSharing(true)
+    setShareStatus({ type: null, message: '' })
+    const botUsername = import.meta.env.VITE_TELEGRAM_BOT_USERNAME || 'testproject3_bot'
+    const rawPayload = `habit_${String(habit.id)}`
+    const shareLink = `https://t.me/${botUsername}?start=${encodePayload(rawPayload)}`
+    try {
+      await request.post(ENDPOINTS.habits.share(habit.id))
+      openTelegramShare({ url: shareLink, text: 'Посмотри эту привычку' })
+      setShareStatus({ type: 'success', message: 'Ссылка отправлена через Telegram' })
+    } catch {
+      setShareStatus({ type: 'error', message: 'Не удалось поделиться' })
+    } finally {
+      setIsSharing(false)
+    }
+  }
+
+  const handleShareCopyLink = async () => {
+    if (!habit?.id || isSharing) return
+    setIsSharing(true)
+    setShareStatus({ type: null, message: '' })
+    const botUsername = import.meta.env.VITE_TELEGRAM_BOT_USERNAME || 'testproject3_bot'
+    const rawPayload = `habit_${String(habit.id)}`
+    const shareLink = `https://t.me/${botUsername}?start=${encodePayload(rawPayload)}`
+    try {
+      await request.post(ENDPOINTS.habits.share(habit.id))
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(shareLink)
+      } else {
+        const textarea = document.createElement('textarea')
+        textarea.value = shareLink
+        textarea.style.position = 'fixed'
+        textarea.style.opacity = '0'
+        document.body.appendChild(textarea)
+        textarea.focus()
+        textarea.select()
+        document.execCommand('copy')
+        document.body.removeChild(textarea)
+      }
+      setShareStatus({ type: 'success', message: 'Ссылка на привычку скопирована' })
+    } catch {
+      setShareStatus({ type: 'error', message: 'Не удалось скопировать ссылку' })
+    } finally {
+      setIsSharing(false)
+    }
   }
 
   const handleCopy = async () => {
@@ -199,12 +257,17 @@ const PublicHabitModal = ({ isOpen, onClose, habit, author, onCopied }) => {
             <p className="public-habit-modal__share-text">
               Вы сможете следить за прогрессом друзей, если пригласите их как соучастников
             </p>
-            <button className="public-habit-modal__share-primary" type="button">
+            <button className="public-habit-modal__share-primary" type="button" onClick={handleShareToContacts}>
+              {isSharing ? 'Отправляем...' : 'Отправить в Telegram'}
+            </button>
+            <button className="public-habit-modal__share-secondary" type="button" onClick={handleShareCopyLink}>
               Скопировать ссылку
             </button>
-            <button className="public-habit-modal__share-secondary" type="button">
-              Пригласить соучастника
-            </button>
+            {shareStatus.message && (
+              <div className="public-habit-modal__stat-label" style={{ marginTop: 8 }}>
+                {shareStatus.message}
+              </div>
+            )}
           </div>
         </div>
       )}

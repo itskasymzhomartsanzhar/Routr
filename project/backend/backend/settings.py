@@ -37,6 +37,7 @@ CSRF_TRUSTED_ORIGINS = env_list(
 )
 
 BOT_TOKEN = os.getenv("BOT_TOKEN", "")
+BOT_USERNAME = os.getenv("BOT_USERNAME", "")
 REDIS_URL = os.getenv("REDIS_URL", "redis://127.0.0.1:6379/0")
 USE_REDIS = env_bool("USE_REDIS", True)
 ROBOKASSA_MERCHANT_LOGIN = os.getenv("ROBOKASSA_MERCHANT_LOGIN", "")
@@ -110,13 +111,35 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 
 
 sqlite_path = os.getenv("SQLITE_PATH")
+sqlite_name = sqlite_path or str(BASE_DIR / "db.sqlite3")
+
+if sqlite_name != ":memory:":
+    sqlite_dir = Path(sqlite_name).expanduser().resolve().parent
+    try:
+        sqlite_dir.mkdir(parents=True, exist_ok=True)
+    except Exception:
+        sqlite_name = str(BASE_DIR / "db.sqlite3")
+        Path(sqlite_name).parent.mkdir(parents=True, exist_ok=True)
 
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': sqlite_path or (BASE_DIR / 'db.sqlite3'),
+        'NAME': sqlite_name,
     }
 }
+
+# PostgreSQL (пример подключения)
+# DATABASES = {
+#     "default": {
+#         "ENGINE": "django.db.backends.postgresql",
+#         "NAME": os.getenv("POSTGRES_DB", "routr"),
+#         "USER": os.getenv("POSTGRES_USER", "routr"),
+#         "PASSWORD": os.getenv("POSTGRES_PASSWORD", "routr"),
+#         "HOST": os.getenv("POSTGRES_HOST", "postgres"),
+#         "PORT": os.getenv("POSTGRES_PORT", "5432"),
+#     }
+# }
+
 
 
 AUTH_PASSWORD_VALIDATORS = [
@@ -138,7 +161,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'ru-ru'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Europe/Moscow'
 
 USE_I18N = True
 

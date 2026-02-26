@@ -15,6 +15,7 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from telegram_bot.config import BOT_TOKEN
 from telegram_bot.handlers.user import user_router
 from telegram_bot.handlers.admin import admin_router
+from telegram_bot.reminders import run_reminder_loop
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -23,8 +24,11 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 async def main():
+    if not BOT_TOKEN:
+        raise RuntimeError("BOT_TOKEN is not configured")
+
     bot = Bot(
-        token="8055384836:AAEQcRD8JpY44XpH9SGrf_XFzzvkNs29a6E",
+        token=BOT_TOKEN,
         default=DefaultBotProperties(parse_mode=ParseMode.HTML)
     )
 
@@ -33,11 +37,17 @@ async def main():
     dp.include_router(admin_router)
     dp.include_router(user_router)
 
+    reminder_task = asyncio.create_task(run_reminder_loop(bot))
     logger.info("✅ Bot started successfully!")
 
     try:
         await dp.start_polling(bot, allowed_updates=dp.resolve_used_update_types())
     finally:
+        reminder_task.cancel()
+        try:
+            await reminder_task
+        except asyncio.CancelledError:
+            pass
         await bot.session.close()
 
 
