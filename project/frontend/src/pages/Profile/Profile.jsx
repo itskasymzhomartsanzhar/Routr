@@ -5,6 +5,8 @@ import { useAuth } from '../../contexts/AuthContext.jsx'
 import { useAppData } from '../../contexts/AppDataContext.jsx'
 import placeholderAvatar from '../../assets/placeholder.png'
 import { buildBalanceFromHabits } from '../../utils/balance.js'
+import ENDPOINTS from '../../utils/endpoints.js'
+import { request } from '../../utils/api.js'
 import './Profile.scss'
 
 const Profile = () => {
@@ -17,6 +19,8 @@ const Profile = () => {
   const [settings, setSettings] = useState(null)
   const [isSettingsSaving, setIsSettingsSaving] = useState(false)
   const [balanceData, setBalanceData] = useState([])
+  const [premiumStatus, setPremiumStatus] = useState({ type: null, message: '' })
+  const [isPremiumPaying, setIsPremiumPaying] = useState(false)
   const pendingSettingsRef = useRef({})
   const settingsSnapshotRef = useRef({})
   const settingsDebounceRef = useRef(null)
@@ -247,6 +251,27 @@ const Profile = () => {
     }
   }, [SETTINGS_DEBOUNCE_MS, buildLocalLeaderboardForParticipation, setBootstrapData, updateProfile])
 
+  const handlePremiumPurchase = async () => {
+    if (!premiumProduct?.id || isPremiumPaying) return
+    setIsPremiumPaying(true)
+    setPremiumStatus({ type: null, message: '' })
+    try {
+      const result = await request.post(ENDPOINTS.payments.robokassaSendMessage, { product_id: premiumProduct.id })
+      if (result?.status === 'offer_sent') {
+        setPremiumStatus({ type: 'success', message: 'Сообщение для оплаты отправлено в Telegram' })
+      } else {
+        setPremiumStatus({ type: 'success', message: 'Сообщение для оплаты отправлено в Telegram' })
+      }
+    } catch (error) {
+      setPremiumStatus({
+        type: 'error',
+        message: error?.response?.data?.detail || 'Не удалось отправить сообщение в Telegram',
+      })
+    } finally {
+      setIsPremiumPaying(false)
+    }
+  }
+
   const handleSettingChange = (field) => (event) => {
     const value = event.target.checked
     setSettings((prev) => ({ ...(prev || {}), [field]: value }))
@@ -299,6 +324,15 @@ const Profile = () => {
         year: '2-digit',
       })
     : ''
+  const premiumProduct = (() => {
+    const products = Array.isArray(bootstrap?.products) ? bootstrap.products : []
+    const byFlag = products.find((item) => item?.is_premium && String(item.currency || '').toUpperCase() === 'RUB')
+    if (byFlag) return byFlag
+    return products.find((item) => {
+      const name = String(item?.name || '').toLowerCase()
+      return (name.includes('premium') || name.includes('премиум')) && String(item.currency || '').toUpperCase() === 'RUB'
+    })
+  })()
   const botUsername = import.meta.env.VITE_TELEGRAM_BOT_USERNAME || 'testproject3_bot'
 
   const handleShareProfile = async () => {
@@ -437,9 +471,23 @@ const Profile = () => {
                 </div>
               ))}
             </div>
-            <button className="profile__premium-cta" type="button">
-              Подписаться за 599₽/мес
+            <button
+              className="profile__premium-cta"
+              type="button"
+              onClick={handlePremiumPurchase}
+              disabled={isPremiumPaying || !premiumProduct}
+            >
+              {isPremiumPaying
+                ? 'Отправляем...'
+                : premiumProduct
+                  ? `Подписаться за ${premiumProduct.price}₽`
+                  : 'Подписаться'}
             </button>
+            {premiumStatus.message && (
+              <div className={`profile__toast profile__toast--${premiumStatus.type || 'info'}`} style={{ marginTop: 12 }}>
+                {premiumStatus.message}
+              </div>
+            )}
 
           </div>
         </section>
