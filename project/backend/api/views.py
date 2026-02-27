@@ -9,7 +9,7 @@ import requests
 from datetime import date, datetime, time, timedelta, timezone as dt_timezone
 from decimal import Decimal, InvalidOperation
 from difflib import SequenceMatcher
-from urllib.parse import parse_qsl, unquote
+from urllib.parse import parse_qsl, unquote, parse_qs
 
 from django.conf import settings
 from django.core.cache import cache
@@ -1899,7 +1899,21 @@ def send_robokassa_payment_message(request):
 @permission_classes([AllowAny])
 def robokassa_result_webhook(request):
     payload = dict(request.data or {})
+    if not payload:
+        try:
+            raw = request.body.decode("utf-8")
+            parsed = parse_qs(raw, keep_blank_values=True)
+            payload = {k: v[-1] if isinstance(v, list) and v else v for k, v in parsed.items()}
+        except Exception:
+            payload = {}
+    if not payload:
+        payload = dict(request.query_params or {})
+
+    if not payload:
+        return HttpResponse("bad request", status=400, content_type="text/plain; charset=utf-8")
+
     if not verify_result_signature(payload):
+        logger.warning("Robokassa webhook bad sign: payload_keys=%s", list(payload.keys()))
         return HttpResponse("bad sign", status=400, content_type="text/plain; charset=utf-8")
 
     out_sum_raw = str(payload.get("OutSum", "")).strip()
