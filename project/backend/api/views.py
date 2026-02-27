@@ -123,6 +123,28 @@ def _telegram_send_message(*, chat_id: int, text: str, reply_markup: dict | None
     return data
 
 
+def _telegram_edit_message(*, chat_id: int, message_id: int, text: str, reply_markup: dict | None = None) -> None:
+    if not settings.BOT_TOKEN:
+        return
+    url = f"https://api.telegram.org/bot{settings.BOT_TOKEN}/editMessageText"
+    payload: dict = {
+        "chat_id": int(chat_id),
+        "message_id": int(message_id),
+        "text": text,
+    }
+    if reply_markup is not None:
+        payload["reply_markup"] = reply_markup
+    try:
+        response = requests.post(url, json=payload, timeout=8)
+        data = response.json() if response.content else {}
+    except Exception as exc:
+        logger.warning("Failed to edit Telegram message: chat_id=%s message_id=%s error=%s", chat_id, message_id, exc)
+        return
+    if not response.ok or not data.get("ok"):
+        description = data.get("description") or f"HTTP {response.status_code}"
+        logger.warning("Telegram editMessageText failed: chat_id=%s message_id=%s error=%s", chat_id, message_id, description)
+
+
 def _parse_name_count(name: str) -> int:
     match = re.search(r"(\d+)\s*шт", name, re.IGNORECASE)
     if match:
@@ -1855,11 +1877,19 @@ def send_robokassa_payment_message(request):
             [{"text": "Оплатить", "url": payment_url}],
         ]
     }
-    _telegram_send_message(
+    message_payload = _telegram_send_message(
         chat_id=int(user.telegram_id),
         text=f"Оплата: {safe_name}\nСумма: {product.price} RUB\n\nОплатите по кнопке ниже.",
         reply_markup=reply_markup,
     )
+    message_id = message_payload.get("result", {}).get("message_id")
+    if message_id:
+        payment.metadata = {
+            **(payment.metadata or {}),
+            "telegram_message_id": int(message_id),
+            "telegram_chat_id": int(user.telegram_id),
+        }
+        payment.save(update_fields=["metadata", "updated_at"])
     return Response({"status": "payment_sent", "invoice_id": payment.invoice_id, "payment_id": payment.id})
 
 
@@ -1910,12 +1940,23 @@ def robokassa_result_webhook(request):
             "applied_effects": effects,
         }
         payment.save(update_fields=["status", "paid_at", "metadata", "updated_at"])
-        transaction.on_commit(
-            lambda: _notify_telegram_payment_success(
-                telegram_id=user.telegram_id,
-                product_name=payment.product.name,
+        telegram_message_id = (payment.metadata or {}).get("telegram_message_id")
+        if telegram_message_id and user.telegram_id:
+            transaction.on_commit(
+                lambda: _telegram_edit_message(
+                    chat_id=int(user.telegram_id),
+                    message_id=int(telegram_message_id),
+                    text=f"Оплата подтверждена.\nПакет: {payment.product.name}",
+                    reply_markup=None,
+                )
             )
-        )
+        else:
+            transaction.on_commit(
+                lambda: _notify_telegram_payment_success(
+                    telegram_id=user.telegram_id,
+                    product_name=payment.product.name,
+                )
+            )
 
     return HttpResponse(f"OK{inv_id}", content_type="text/plain; charset=utf-8")
 
@@ -1964,12 +2005,23 @@ def robokassa_success(request):
                 "applied_effects": effects,
             }
             payment.save(update_fields=["status", "paid_at", "metadata", "updated_at"])
-            transaction.on_commit(
-                lambda: _notify_telegram_payment_success(
-                    telegram_id=user.telegram_id,
-                    product_name=payment.product.name,
+            telegram_message_id = (payment.metadata or {}).get("telegram_message_id")
+            if telegram_message_id and user.telegram_id:
+                transaction.on_commit(
+                    lambda: _telegram_edit_message(
+                        chat_id=int(user.telegram_id),
+                        message_id=int(telegram_message_id),
+                        text=f"Оплата подтверждена.\nПакет: {payment.product.name}",
+                        reply_markup=None,
+                    )
                 )
-            )
+            else:
+                transaction.on_commit(
+                    lambda: _notify_telegram_payment_success(
+                        telegram_id=user.telegram_id,
+                        product_name=payment.product.name,
+                    )
+                )
 
     return HttpResponseRedirect("https://t.me/Routr_bot")
 
@@ -1996,6 +2048,17 @@ def robokassa_fail(request):
             payment.status = Payment.STATUS_FAILED
             payment.metadata = {**(payment.metadata or {}), "fail_payload": payload}
             payment.save(update_fields=["status", "metadata", "updated_at"])
+            telegram_message_id = (payment.metadata or {}).get("telegram_message_id")
+            telegram_chat_id = (payment.metadata or {}).get("telegram_chat_id")
+            if telegram_message_id and telegram_chat_id:
+                transaction.on_commit(
+                    lambda: _telegram_edit_message(
+                        chat_id=int(telegram_chat_id),
+                        message_id=int(telegram_message_id),
+                        text="Оплата не завершена. Попробуйте ещё раз.",
+                        reply_markup=None,
+                    )
+                )
 
     return HttpResponseRedirect("https://t.me/Routr_bot")
 
