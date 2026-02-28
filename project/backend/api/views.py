@@ -1899,6 +1899,8 @@ def send_robokassa_payment_message(request):
 @permission_classes([AllowAny])
 def robokassa_result_webhook(request):
     payload = dict(request.data or {})
+    if payload:
+        payload = {k: (v[-1] if isinstance(v, (list, tuple)) and v else v) for k, v in payload.items()}
     print("Robokassa webhook payload:", payload)
     if not payload:
         try:
@@ -1909,9 +1911,18 @@ def robokassa_result_webhook(request):
             payload = {}
     if not payload:
         payload = dict(request.query_params or {})
+    if payload:
+        payload = {k: (v[-1] if isinstance(v, (list, tuple)) and v else v) for k, v in payload.items()}
 
     if not payload:
         return HttpResponse("bad request", status=400, content_type="text/plain; charset=utf-8")
+
+    if "SignatureValue" not in payload and "crc" in payload:
+        payload["SignatureValue"] = payload.get("crc")
+    if "OutSum" not in payload and "out_summ" in payload:
+        payload["OutSum"] = payload.get("out_summ")
+    if "InvId" not in payload and "inv_id" in payload:
+        payload["InvId"] = payload.get("inv_id")
 
     if not verify_result_signature(payload):
         logger.warning("Robokassa webhook bad sign: payload_keys=%s", list(payload.keys()))
