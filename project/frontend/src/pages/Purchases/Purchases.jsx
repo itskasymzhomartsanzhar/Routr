@@ -55,17 +55,19 @@ const Purchases = () => {
 
   const normalizedItems = useMemo(
     () =>
-      (items || []).map((item) => {
-        const product = item?.product || {}
-        return {
-          id: item?.id ?? `${product?.id || 'product'}-${item?.created_at || Math.random()}`,
-          title: formatText(product?.name || 'Покупка'),
-          subtitle: formatText(product?.description || ''),
-          date: formatDate(item?.purchased_at || item?.paid_at || item?.created_at),
-          image: product?.image || placeholderImage,
-          status: item?.status || 'paid',
-        }
-      }),
+      (items || [])
+        .filter((item) => !(item?.product?.is_premium))
+        .map((item) => {
+          const product = item?.product || {}
+          return {
+            id: item?.id ?? `${product?.id || 'product'}-${item?.created_at || Math.random()}`,
+            title: formatText(product?.name || 'Покупка'),
+            subtitle: formatText(product?.description || ''),
+            date: formatDate(item?.purchased_at || item?.paid_at || item?.created_at),
+            image: product?.image || placeholderImage,
+            status: item?.status || 'paid',
+          }
+        }),
     [items]
   )
 
