@@ -44,6 +44,7 @@ const Shop = () => {
   const activeCurrencyCode = activeCurrency === 'rub' ? 'RUB' : 'STARS'
   const visibleProducts = products.filter((product) => {
     const currency = (product.currency || '').toUpperCase()
+    if (product?.is_premium) return false
     return currency === activeCurrencyCode
   })
   const formatText = (value) => {

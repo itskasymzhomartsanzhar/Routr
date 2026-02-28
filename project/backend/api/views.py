@@ -217,6 +217,21 @@ def _apply_payment_product_effects(user: User, product: Product, now: datetime) 
     return effects
 
 
+def _format_payment_effects(product: Product, effects: dict) -> str:
+    lines = []
+    if effects.get("premium_days"):
+        lines.append(f"Премиум: +{effects['premium_days']} дн.")
+    if effects.get("xp_boost_multiplier"):
+        lines.append(f"Бустер XP: ×{effects['xp_boost_multiplier']}")
+    if effects.get("extra_habit_slots"):
+        lines.append(f"Доп. привычки: +{effects['extra_habit_slots']}")
+    if effects.get("streak_shields"):
+        lines.append(f"Щиты стрика: +{effects['streak_shields']}")
+    if not lines:
+        lines.append("Покупка активирована")
+    return "\n".join(lines)
+
+
 def _get_week_start(target_date: date) -> date:
     return target_date - timedelta(days=target_date.weekday())
 
@@ -1968,11 +1983,12 @@ def robokassa_result_webhook(request):
         payment.save(update_fields=["status", "paid_at", "metadata", "updated_at"])
         telegram_message_id = (payment.metadata or {}).get("telegram_message_id")
         if telegram_message_id and user.telegram_id:
+            effects_text = _format_payment_effects(payment.product, effects)
             transaction.on_commit(
                 lambda: _telegram_edit_message(
                     chat_id=int(user.telegram_id),
                     message_id=int(telegram_message_id),
-                    text=f"Оплата подтверждена.\nПакет: {payment.product.name}",
+                    text=f"Оплата подтверждена.\nПакет: {payment.product.name}\n{effects_text}",
                     reply_markup=None,
                 )
             )
@@ -2033,11 +2049,12 @@ def robokassa_success(request):
             payment.save(update_fields=["status", "paid_at", "metadata", "updated_at"])
             telegram_message_id = (payment.metadata or {}).get("telegram_message_id")
             if telegram_message_id and user.telegram_id:
+                effects_text = _format_payment_effects(payment.product, effects)
                 transaction.on_commit(
                     lambda: _telegram_edit_message(
                         chat_id=int(user.telegram_id),
                         message_id=int(telegram_message_id),
-                        text=f"Оплата подтверждена.\nПакет: {payment.product.name}",
+                        text=f"Оплата подтверждена.\nПакет: {payment.product.name}\n{effects_text}",
                         reply_markup=None,
                     )
                 )
