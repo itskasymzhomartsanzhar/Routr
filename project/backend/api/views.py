@@ -1899,6 +1899,7 @@ def send_robokassa_payment_message(request):
 @permission_classes([AllowAny])
 def robokassa_result_webhook(request):
     payload = dict(request.data or {})
+    print("Robokassa webhook payload:", payload)
     if not payload:
         try:
             raw = request.body.decode("utf-8")
