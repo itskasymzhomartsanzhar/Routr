@@ -25,6 +25,43 @@
     color: #0f1f35;
   }
 
+  &__purchases {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 16px;
+    border-radius: 16px;
+    border: 1px solid #EAECF0;
+    background: #FFFFFF;
+    color: #0f1f35;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+  }
+
+  &__purchases:active {
+    transform: translateY(1px);
+  }
+
+  &__purchases-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  &__purchases-icon,
+  &__purchases-arrow {
+    color: #7C8392;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &__purchases-text {
+    color: #0f1f35;
+  }
+
   &__tabs {
     display: grid;
     grid-template-columns: repeat(2, 1fr);

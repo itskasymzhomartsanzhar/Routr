@@ -10,6 +10,7 @@ const Shop = lazy(() => import('./pages/Shop/Shop.jsx'))
 const Stats = lazy(() => import('./pages/Stats/Stats.jsx'))
 const Profile = lazy(() => import('./pages/Profile/Profile.jsx'))
 const Quests = lazy(() => import('./pages/Quests/Quests.jsx'))
+const Purchases = lazy(() => import('./pages/Purchases/Purchases.jsx'))
 
 function App() {
   const { loading: authLoading } = useAuth()
@@ -25,6 +26,7 @@ function App() {
         <Route path="/" element={<Home />} />
         <Route path="/journal" element={<Journal />} />
         <Route path="/shop" element={<Shop />} />
+        <Route path="/shop/purchases" element={<Purchases />} />
         <Route path="/stats" element={<Stats />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/quests" element={<Quests />} />

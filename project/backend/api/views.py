@@ -44,6 +44,7 @@ from .models import (
 from .serializers import (
     CategorySerializer,
     HabitSerializer,
+    PaymentSerializer,
     ProductSerializer,
     QuestSerializer,
     TelegramAuthSerializer,
@@ -1625,6 +1626,27 @@ def _build_leaderboard_payload(user: User, range_key: str = "month", limit: int 
         items = patched_items
 
     return {"range": normalized_range, "items": items, "me": me}
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def get_my_purchases(request):
+    status_param = (request.query_params.get("status") or "paid").strip().lower()
+    payments = (
+        Payment.objects.filter(user=request.user)
+        .select_related("product")
+        .order_by("-paid_at", "-created_at", "-id")
+    )
+
+    if status_param != "all":
+        statuses = [value.strip() for value in status_param.split(",") if value.strip()]
+        if statuses:
+            payments = payments.filter(status__in=statuses)
+        else:
+            payments = payments.filter(status=Payment.STATUS_PAID)
+
+    serializer = PaymentSerializer(payments, many=True, context={"request": request})
+    return Response(serializer.data)
 
 
 @api_view(["GET"])

@@ -1,0 +1,147 @@
+.purchases {
+  max-width: 768px;
+  margin: 0 auto;
+  padding: 20px 20px 120px;
+  min-height: 100vh;
+  overflow-y: auto;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+
+  &__content {
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+  }
+
+  &__header {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+  }
+
+  &__back {
+    width: 48px;
+    height: 48px;
+    border-radius: 16px;
+    border: 1px solid #E5E8EE;
+    background: #FFFFFF;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #0f1f35;
+    flex-shrink: 0;
+  }
+
+  &__title {
+    font-size: 22px;
+    font-weight: 500;
+    margin: 0;
+    color: #0f1f35;
+  }
+
+  &__grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+  }
+
+  &__status {
+    font-size: 13px;
+    border-radius: 12px;
+    padding: 10px 12px;
+    border: 1px solid #E5E7EB;
+    background: #F8FAFC;
+    color: #0F172A;
+  }
+
+  &__status--error {
+    color: #991B1B;
+    background: #FEF2F2;
+    border-color: #FECACA;
+  }
+
+  &__card {
+    background: #FFFFFF;
+    border-radius: 16px;
+    border: 1px solid #EAECF0;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 10px;
+  }
+
+  &__card-icon {
+    width: 84px;
+    height: 84px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &__card-icon img {
+    width: 84px;
+    height: 84px;
+    object-fit: contain;
+  }
+
+  &__card-title {
+    font-size: 14px;
+    font-weight: 500;
+    color: #0f1f35;
+    white-space: pre-line;
+  }
+
+  &__card-subtitle {
+    font-size: 12px;
+    color: #9B9BA1;
+    font-weight: 400;
+    white-space: pre-line;
+  }
+
+  &__card-date {
+    margin-top: 4px;
+    padding: 8px 12px;
+    border-radius: 12px;
+    background: #F2F3F6;
+    color: #0f1f35;
+    font-weight: 500;
+    font-size: 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  &__card-date-icon {
+    color: #3843FF;
+    display: flex;
+    align-items: center;
+  }
+}
+
+@media (max-width: 520px) {
+  .purchases {
+    &__grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    &__card {
+      padding: 18px 12px 16px;
+    }
+
+    &__card-title {
+      font-size: 15px;
+    }
+
+    &__card-date {
+      font-size: 13px;
+    }
+  }
+}

@@ -2,7 +2,7 @@ from rest_framework import serializers
 
 from django.utils import timezone
 from datetime import date
-from .models import Product, User, Habit, HabitCompletion, Category, Title, Quest
+from .models import Product, User, Habit, HabitCompletion, Category, Title, Quest, Payment
 
 
 class TelegramAuthSerializer(serializers.Serializer):
@@ -77,6 +77,29 @@ class ProductSerializer(serializers.ModelSerializer):
             "created_at",
         )
         read_only_fields = ("created_at",)
+
+
+class PaymentSerializer(serializers.ModelSerializer):
+    product = ProductSerializer(read_only=True)
+    purchased_at = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Payment
+        fields = (
+            "id",
+            "status",
+            "provider",
+            "amount",
+            "currency",
+            "paid_at",
+            "created_at",
+            "purchased_at",
+            "product",
+        )
+        read_only_fields = ("paid_at", "created_at")
+
+    def get_purchased_at(self, obj):
+        return obj.paid_at or obj.created_at
 
 
 class CategorySerializer(serializers.ModelSerializer):

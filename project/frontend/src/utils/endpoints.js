@@ -15,6 +15,7 @@ export default {
   payments: {
     robokassaCreate: "/api/payments/robokassa/create/",
     robokassaSendMessage: "/api/payments/robokassa/send-message/",
+    my: "/api/payments/my/",
   },
   habits: {
     list: "/api/habits/",
