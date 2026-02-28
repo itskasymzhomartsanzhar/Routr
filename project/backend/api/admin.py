@@ -33,6 +33,10 @@ class UserAdmin(admin.ModelAdmin):
         'current_title',
         'level',
         'xp',
+        'extra_habit_slots',
+        'streak_shields',
+        'xp_boost_multiplier',
+        'xp_boost_expires_at',
         'is_premium',
         'date_joined',
     )
@@ -49,7 +53,15 @@ class UserAdmin(admin.ModelAdmin):
             'fields': ('photo_url', 'premium_expiration')
         }),
         ('Прогресс', {
-            'fields': ('current_title', 'level', 'xp')
+            'fields': (
+                'current_title',
+                'level',
+                'xp',
+                'extra_habit_slots',
+                'streak_shields',
+                'xp_boost_multiplier',
+                'xp_boost_expires_at',
+            )
         }),
         ('Уведомления и приватность', {
             'fields': (
@@ -83,8 +95,19 @@ class UserAdmin(admin.ModelAdmin):
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
-    list_display = ("name", "price", "currency", "duration_days", "is_active", "created_at")
-    list_filter = ("is_active", "currency", "duration_days")
+    list_display = (
+        "name",
+        "price",
+        "currency",
+        "duration_days",
+        "is_premium",
+        "xp_multiplier",
+        "extra_habit_slots",
+        "streak_shields",
+        "is_active",
+        "created_at",
+    )
+    list_filter = ("is_active", "currency", "duration_days", "is_premium")
     search_fields = ("name", "description")
     readonly_fields = ("created_at",)
 

@@ -190,6 +190,8 @@ def _apply_payment_product_effects(user: User, product: Product, now: datetime) 
                 multiplier = 1.0
 
     duration_days = int(product.duration_days or 0)
+    if duration_days <= 0 and (product.is_premium or "premium" in name or "премиум" in name):
+        duration_days = 30
     if multiplier > 1 and duration_days > 0:
         current_multiplier = float(user.xp_boost_multiplier or 1)
         current_expires = user.xp_boost_expires_at
