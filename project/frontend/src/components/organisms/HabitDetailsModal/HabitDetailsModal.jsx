@@ -50,6 +50,13 @@ const HabitDetailsModal = ({ isOpen, onClose, onEdit, habit, habits, statsDays =
     }, 300)
   }
 
+  const parseDateOnly = (value) => {
+    if (!value) return null
+    const raw = String(value)
+    const datePart = raw.includes('T') ? raw.split('T')[0] : raw
+    return parseDateValue(datePart)
+  }
+
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden'
@@ -76,7 +83,7 @@ const HabitDetailsModal = ({ isOpen, onClose, onEdit, habit, habits, statsDays =
       const limitStart = new Date(now)
       limitStart.setDate(now.getDate() - Math.max(defaultWindowDays - 1, 0))
       const createdAt = habit?.created_at || habit?.createdAt
-      const createdDate = createdAt ? new Date(createdAt) : null
+      const createdDate = parseDateOnly(createdAt)
       const effectiveStart = createdDate && createdDate > limitStart ? createdDate : limitStart
       const initialStart = formatDateValue(effectiveStart)
       const initialEnd = formatDateValue(now)
@@ -92,7 +99,7 @@ const HabitDetailsModal = ({ isOpen, onClose, onEdit, habit, habits, statsDays =
     const limitStart = new Date()
     limitStart.setDate(today.getDate() - Math.max(defaultWindowDays - 1, 0))
     const createdAt = habit?.created_at || habit?.createdAt
-    const createdDate = createdAt ? new Date(createdAt) : null
+    const createdDate = parseDateOnly(createdAt)
     const effectiveStart = createdDate && createdDate > limitStart ? createdDate : limitStart
     const todayValue = formatDateValue(today)
     const limitStartValue = formatDateValue(effectiveStart)
@@ -317,7 +324,7 @@ const HabitDetailsModal = ({ isOpen, onClose, onEdit, habit, habits, statsDays =
 
   const statsMinDate = (() => {
     const createdAt = habit?.created_at || habit?.createdAt
-    const createdDate = createdAt ? new Date(createdAt) : null
+    const createdDate = parseDateOnly(createdAt)
     if (createdDate) {
       return formatDateValue(createdDate)
     }
