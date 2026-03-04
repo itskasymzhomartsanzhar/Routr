@@ -88,7 +88,8 @@ const Home = () => {
     totalCompletions: habit.total_completions ?? 0,
     currentStreak: habit.current_streak ?? 0,
     bestStreak: habit.best_streak ?? 0,
-    sourceHabitId: habit.source_habit_id ?? null
+    sourceHabitId: habit.source_habit_id ?? null,
+    createdAt: habit.created_at ?? null
   })
 
   const mapHabitToApi = (habitData) => {
