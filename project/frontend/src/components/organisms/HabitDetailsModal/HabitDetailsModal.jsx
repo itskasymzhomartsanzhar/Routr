@@ -72,29 +72,37 @@ const HabitDetailsModal = ({ isOpen, onClose, onEdit, habit, habits, statsDays =
       setShareStatus({ type: null, message: '' })
       setIsShareCopying(false)
       const now = new Date()
+      const defaultWindowDays = 7
       const limitStart = new Date(now)
-      limitStart.setDate(now.getDate() - Math.max((statsDays || 30) - 1, 0))
-      const initialStart = formatDateValue(limitStart)
+      limitStart.setDate(now.getDate() - Math.max(defaultWindowDays - 1, 0))
+      const createdAt = habit?.created_at || habit?.createdAt
+      const createdDate = createdAt ? new Date(createdAt) : null
+      const effectiveStart = createdDate && createdDate > limitStart ? createdDate : limitStart
+      const initialStart = formatDateValue(effectiveStart)
       const initialEnd = formatDateValue(now)
       setRangeStart(initialStart)
       setRangeEnd(initialEnd)
     }
-  }, [isOpen, statsDays])
+  }, [isOpen, statsDays, habit?.created_at, habit?.createdAt])
 
   useEffect(() => {
     if (!isOpen) return
     const today = new Date()
+    const defaultWindowDays = 7
     const limitStart = new Date()
-    limitStart.setDate(today.getDate() - Math.max((statsDays || 30) - 1, 0))
+    limitStart.setDate(today.getDate() - Math.max(defaultWindowDays - 1, 0))
+    const createdAt = habit?.created_at || habit?.createdAt
+    const createdDate = createdAt ? new Date(createdAt) : null
+    const effectiveStart = createdDate && createdDate > limitStart ? createdDate : limitStart
     const todayValue = formatDateValue(today)
-    const limitStartValue = formatDateValue(limitStart)
+    const limitStartValue = formatDateValue(effectiveStart)
     if (rangeEnd && rangeEnd > todayValue) {
       setRangeEnd(todayValue)
     }
     if (rangeStart && rangeStart < limitStartValue) {
       setRangeStart(limitStartValue)
     }
-  }, [isOpen, statsDays, rangeStart, rangeEnd])
+  }, [isOpen, statsDays, rangeStart, rangeEnd, habit?.created_at, habit?.createdAt])
 
   useEffect(() => {
     if (!isOpen || !habit?.id) {
@@ -307,9 +315,14 @@ const HabitDetailsModal = ({ isOpen, onClose, onEdit, habit, habits, statsDays =
   const hasValidRange =
     Boolean(rangeStartDate && rangeEndDate) && rangeStartDate <= rangeEndDate
 
-  const statsMinDate = formatDateValue(
-    new Date(new Date().setDate(new Date().getDate() - Math.max((statsDays || 30) - 1, 0)))
-  )
+  const statsMinDate = (() => {
+    const createdAt = habit?.created_at || habit?.createdAt
+    const createdDate = createdAt ? new Date(createdAt) : null
+    if (createdDate) {
+      return formatDateValue(createdDate)
+    }
+    return formatDateValue(new Date())
+  })()
   const statsMaxDate = formatDateValue(new Date())
 
   const countCompletionsInRange = (dateValues, completionItems) => {
