@@ -382,7 +382,7 @@ const HabitModal = ({
           </div>
 
           <div className="add-habit-modal__section">
-            <label className="add-habit-modal__label">Ограничить по дате</label>
+            <label className="add-habit-modal__label">До даты</label>
             <div className="add-habit-modal__goal">
               <input
                 type="date"
@@ -393,7 +393,7 @@ const HabitModal = ({
                   setHabitData({ ...habitData, endDate: event.target.value })
                 }}
               />
-              <span className="add-habit-modal__goal-text">до</span>
+              <span className="add-habit-modal__goal-text">до даты</span>
             </div>
             <div className="add-habit-modal__hint">
               После этой даты привычка автоматически уйдёт в архив.
