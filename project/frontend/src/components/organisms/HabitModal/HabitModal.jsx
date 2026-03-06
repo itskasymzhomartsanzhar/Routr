@@ -143,7 +143,7 @@ const HabitModal = ({
       return
     }
 
-    setHabitData(defaultHabitData)
+    setHabitData({ ...defaultHabitData, endDate: '' })
   }, [isOpen, mode, initialData])
 
   useEffect(() => {
