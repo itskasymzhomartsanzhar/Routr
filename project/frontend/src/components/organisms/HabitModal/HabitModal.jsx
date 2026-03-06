@@ -36,6 +36,7 @@ const HabitModal = ({
   const categoryRef = useRef(null)
   const repeatRef = useRef(null)
   const emojiRef = useRef(null)
+  const endDateRef = useRef(null)
   const repeatOptions = [
     'Понедельник',
     'Вторник',
@@ -382,11 +383,27 @@ const HabitModal = ({
           </div>
 
           <div className="add-habit-modal__section">
-            <label className="add-habit-modal__label">До даты</label>
-            <div className="add-habit-modal__goal">
+            <label className="add-habit-modal__label">Ограничение длительности</label>
+            <div className="add-habit-modal__goal add-habit-modal__date-field">
+              <button
+                type="button"
+                className="add-habit-modal__date-button"
+                onClick={() => {
+                  if (endDateRef.current?.showPicker) {
+                    endDateRef.current.showPicker()
+                    return
+                  }
+                  endDateRef.current?.focus()
+                }}
+              >
+                <span className={habitData.endDate ? 'add-habit-modal__date-value' : 'add-habit-modal__date-placeholder'}>
+                  {habitData.endDate || 'Выберите дату'}
+                </span>
+              </button>
               <input
+                ref={endDateRef}
                 type="date"
-                className="add-habit-modal__goal-input"
+                className="add-habit-modal__date-input"
                 value={habitData.endDate || ''}
                 min={todayValue}
                 onChange={(event) => {

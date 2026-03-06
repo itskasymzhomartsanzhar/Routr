@@ -540,6 +540,40 @@
     color: #8B93A7;
   }
 
+  &__date-field {
+    position: relative;
+    align-items: center;
+  }
+
+  &__date-button {
+    flex: 1;
+    padding: 12px 14px;
+    border: 1px solid #E6E9F5;
+    border-radius: 14px;
+    background: #F6F8FF;
+    text-align: left;
+    font-size: 16px;
+    font-weight: 600;
+    color: #0F1F35;
+  }
+
+  &__date-placeholder {
+    color: #9AA3B2;
+    font-weight: 500;
+  }
+
+  &__date-value {
+    color: #0F1F35;
+  }
+
+  &__date-input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+    height: 0;
+    width: 0;
+  }
+
   &__submit-wrapper {
     position: absolute;
     bottom: 0;
