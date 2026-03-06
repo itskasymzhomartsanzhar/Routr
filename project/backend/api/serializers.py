@@ -159,6 +159,7 @@ class HabitSerializer(serializers.ModelSerializer):
             "reminder",
             "reminder_times",
             "visibility",
+            "end_date",
             "created_at",
             "updated_at",
             "completed",
@@ -195,6 +196,11 @@ class HabitSerializer(serializers.ModelSerializer):
         limit = 5 if is_premium else 3
         if len(value) > limit:
             raise serializers.ValidationError(f"Максимум {limit} напоминаний.")
+        return value
+
+    def validate_end_date(self, value):
+        if value and value < timezone.localdate():
+            raise serializers.ValidationError("Дата окончания не может быть в прошлом.")
         return value
 
     def _get_context_date(self):

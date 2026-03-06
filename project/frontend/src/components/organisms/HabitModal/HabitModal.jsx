@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { lockBodyScroll, unlockBodyScroll } from '../../../utils/bodyScrollLock.js'
 import './HabitModal.scss'
 
 const HabitModal = ({
@@ -26,7 +27,8 @@ const HabitModal = ({
     goal: 1,
     reminder: true,
     reminderTimes: ['09:30'],
-    visibility: 'Приватный'
+    visibility: 'Приватный',
+    endDate: ''
   }
   const [habitData, setHabitData] = useState(defaultHabitData)
   const [isClosing, setIsClosing] = useState(false)
@@ -107,15 +109,15 @@ const HabitModal = ({
   }
 
   useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden'
+    if (isOpen || isClosing) {
+      lockBodyScroll()
     } else {
-      document.body.style.overflow = 'unset'
+      unlockBodyScroll()
     }
     return () => {
-      document.body.style.overflow = 'unset'
+      unlockBodyScroll()
     }
-  }, [isOpen])
+  }, [isOpen, isClosing])
 
   useEffect(() => {
     if (!isOpen) return
@@ -133,6 +135,7 @@ const HabitModal = ({
         goal: initialData.goal ?? initialData.step ?? defaultHabitData.goal,
         repeatDays,
         repeatType,
+        endDate: initialData.endDate ?? initialData.end_date ?? '',
         reminderTimes: initialData.reminderTimes?.length
           ? initialData.reminderTimes
           : defaultHabitData.reminderTimes
@@ -196,6 +199,14 @@ const HabitModal = ({
   }, [isOpen, canSelectPublic, habitData.visibility])
 
   if (!isOpen && !isClosing) return null
+
+  const todayValue = (() => {
+    const now = new Date()
+    const year = now.getFullYear()
+    const month = String(now.getMonth() + 1).padStart(2, '0')
+    const day = String(now.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  })()
 
   return (
     <div className={`modal-overlay ${isClosing ? 'modal-overlay--closing' : ''}`} onClick={handleClose}>
@@ -367,6 +378,25 @@ const HabitModal = ({
                 />
               </div>
               <span className="add-habit-modal__goal-text">раз в день</span>
+            </div>
+          </div>
+
+          <div className="add-habit-modal__section">
+            <label className="add-habit-modal__label">Ограничить по дате</label>
+            <div className="add-habit-modal__goal">
+              <input
+                type="date"
+                className="add-habit-modal__goal-input"
+                value={habitData.endDate || ''}
+                min={todayValue}
+                onChange={(event) => {
+                  setHabitData({ ...habitData, endDate: event.target.value })
+                }}
+              />
+              <span className="add-habit-modal__goal-text">до</span>
+            </div>
+            <div className="add-habit-modal__hint">
+              После этой даты привычка автоматически уйдёт в архив.
             </div>
           </div>
 

@@ -129,8 +129,8 @@ class CategoryAdmin(admin.ModelAdmin):
 
 @admin.register(Habit)
 class HabitAdmin(admin.ModelAdmin):
-    list_display = ("title", "owner", "category", "goal", "visibility", "copied_count", "share_count", "created_at")
-    list_filter = ("visibility", "category", "created_at")
+    list_display = ("title", "owner", "category", "goal", "visibility", "end_date", "is_archived", "copied_count", "share_count", "created_at")
+    list_filter = ("visibility", "category", "is_archived", "created_at")
     search_fields = ("title", "owner__username", "owner__first_name", "owner__telegram_id")
     readonly_fields = ("created_at", "updated_at")
 

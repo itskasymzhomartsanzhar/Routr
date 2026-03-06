@@ -89,7 +89,8 @@ const Home = () => {
     currentStreak: habit.current_streak ?? 0,
     bestStreak: habit.best_streak ?? 0,
     sourceHabitId: habit.source_habit_id ?? null,
-    createdAt: habit.created_at ?? null
+    createdAt: habit.created_at ?? null,
+    endDate: habit.end_date ?? null
   })
 
   const mapHabitToApi = (habitData) => {
@@ -101,6 +102,9 @@ const Home = () => {
       reminder: habitData.reminder ?? false,
       reminder_times: habitData.reminderTimes ?? [],
       visibility: habitData.visibility ?? 'Приватный'
+    }
+    if (habitData.endDate) {
+      payload.end_date = habitData.endDate
     }
     if (habitData.categoryId) {
       payload.category_id = habitData.categoryId

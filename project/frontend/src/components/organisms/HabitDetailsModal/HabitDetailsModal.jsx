@@ -3,6 +3,7 @@ import placeholderAvatar from '../../../assets/placeholder.png'
 import ENDPOINTS from '../../../utils/endpoints.js'
 import { request } from '../../../utils/api.js'
 import { openTelegramShare } from '../../../utils/telegram.js'
+import { lockBodyScroll, unlockBodyScroll } from '../../../utils/bodyScrollLock.js'
 import './HabitDetailsModal.scss'
 
 const HabitDetailsModal = ({ isOpen, onClose, onEdit, habit, habits, statsDays = 30, currentUserId = null }) => {
@@ -58,13 +59,13 @@ const HabitDetailsModal = ({ isOpen, onClose, onEdit, habit, habits, statsDays =
   }
 
   useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden'
-    } else if (!isClosing) {
-      document.body.style.overflow = ''
+    if (isOpen || isClosing) {
+      lockBodyScroll()
+    } else {
+      unlockBodyScroll()
     }
     return () => {
-      document.body.style.overflow = ''
+      unlockBodyScroll()
     }
   }, [isOpen, isClosing])
 

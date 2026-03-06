@@ -564,6 +564,21 @@ def _rollup_user_habit_stats(user: User, today: date | None = None) -> None:
         _rollup_habit_stats(habit, today)
 
 
+def _archive_expired_habits(user: User, today: date) -> None:
+    Habit.objects.filter(
+        owner=user,
+        is_archived=False,
+        end_date__lt=today,
+    ).update(is_archived=True, archived_at=timezone.now())
+
+
+def _active_habits_queryset(user: User, today: date):
+    return (
+        Habit.objects.filter(owner=user, is_archived=False)
+        .filter(Q(end_date__isnull=True) | Q(end_date__gte=today))
+    )
+
+
 def _get_redis():
     try:
         redis = get_redis_connection("default")
@@ -1654,12 +1669,13 @@ def get_my_purchases(request):
 def app_bootstrap(request):
     user = request.user
     today = timezone.localdate()
+    _archive_expired_habits(user, today)
     _rollup_user_habit_stats(user, today)
     _sync_user_title(user, save=True)
     _check_and_award_quests(user, today)
 
     habits = (
-        Habit.objects.filter(owner=user)
+        _active_habits_queryset(user, today)
         .select_related("category")
         .prefetch_related("completions")
         .order_by("-created_at")
@@ -2201,9 +2217,11 @@ class HabitViewSet(viewsets.ModelViewSet):
         return context
 
     def get_queryset(self):
-        _rollup_user_habit_stats(self.request.user, timezone.localdate())
+        today = timezone.localdate()
+        _archive_expired_habits(self.request.user, today)
+        _rollup_user_habit_stats(self.request.user, today)
         return (
-            Habit.objects.filter(owner=self.request.user)
+            _active_habits_queryset(self.request.user, today)
             .select_related("category")
             .prefetch_related("completions")
             .order_by("-created_at")
@@ -2295,6 +2313,10 @@ class HabitViewSet(viewsets.ModelViewSet):
         today = timezone.localdate()
         if completion_date > today:
             return Response({"detail": "Cannot complete habit for a future date"}, status=status.HTTP_400_BAD_REQUEST)
+        if habit.is_archived:
+            return Response({"detail": "Habit is archived"}, status=status.HTTP_400_BAD_REQUEST)
+        if habit.end_date and completion_date > habit.end_date:
+            return Response({"detail": "Habit is no longer active"}, status=status.HTTP_400_BAD_REQUEST)
 
         if habit.repeat_days:
             weekdays = [
@@ -2382,8 +2404,15 @@ class HabitViewSet(viewsets.ModelViewSet):
         if not source_id:
             return Response({"detail": "habit_id is required"}, status=status.HTTP_400_BAD_REQUEST)
         try:
-            source = Habit.objects.get(pk=source_id, visibility="Публичный")
+            today = timezone.localdate()
+            source = Habit.objects.get(
+                pk=source_id,
+                visibility="Публичный",
+                is_archived=False,
+            )
         except Habit.DoesNotExist:
+            return Response({"detail": "Public habit not found"}, status=status.HTTP_404_NOT_FOUND)
+        if source.end_date and source.end_date < today:
             return Response({"detail": "Public habit not found"}, status=status.HTTP_404_NOT_FOUND)
         if source.owner_id == request.user.id:
             return Response({"detail": "You cannot copy your own public habit"}, status=status.HTTP_400_BAD_REQUEST)

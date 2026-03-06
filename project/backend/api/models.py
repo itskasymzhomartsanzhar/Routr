@@ -218,6 +218,9 @@ class Habit(models.Model):
     streak_best = models.PositiveIntegerField("Рекорд стрик", default=0)
     streak_last_date = models.DateField("Последняя дата стрика", null=True, blank=True)
     stats_rollup_date = models.DateField("Дата последнего роллапа статистики", null=True, blank=True)
+    end_date = models.DateField("Дата окончания", null=True, blank=True)
+    is_archived = models.BooleanField("В архиве", default=False)
+    archived_at = models.DateTimeField("Дата архивации", null=True, blank=True)
     created_at = models.DateTimeField("Создана", auto_now_add=True)
     updated_at = models.DateTimeField("Обновлена", auto_now=True)
 
