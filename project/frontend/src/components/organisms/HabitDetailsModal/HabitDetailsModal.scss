@@ -377,31 +377,85 @@
 }
 
 .habit-details-modal__calendar-day {
-  width: 36px;
-  height: 36px;
-  border-radius: 18px;
+  width: 40px;
+  height: 48px;
+  border-radius: 20px;
   background: transparent;
   border: 1px solid transparent;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
+  gap: 6px;
+  padding-top: 2px;
   margin: 0 auto;
 }
 
 .habit-details-modal__calendar-day--active {
-  background: #EAECF0;
+  background: transparent;
   border-color: transparent;
 }
 
 .habit-details-modal__calendar-day--today {
-  color: #3843FF;
-  background: #EAECF0;
-
+  color: #0f1f35;
 }
 
 .habit-details-modal__calendar-day--empty {
   background: transparent;
   border-color: transparent;
+}
+
+.habit-details-modal__calendar-number {
+  width: 28px;
+  height: 28px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 500;
+  color: #0f1f35;
+  border: 1.5px solid transparent;
+}
+
+.habit-details-modal__calendar-day--today .habit-details-modal__calendar-number {
+  background: #0f1115;
+  color: #ffffff;
+  border-color: #0f1115;
+}
+
+.habit-details-modal__calendar-day--created .habit-details-modal__calendar-number {
+  border-color: #4C63FF;
+  color: #4C63FF;
+}
+
+.habit-details-modal__calendar-day--end .habit-details-modal__calendar-number {
+  border-color: #FF6B6B;
+  color: #FF6B6B;
+}
+
+.habit-details-modal__calendar-day--today.habit-details-modal__calendar-day--created .habit-details-modal__calendar-number,
+.habit-details-modal__calendar-day--today.habit-details-modal__calendar-day--end .habit-details-modal__calendar-number {
+  background: #0f1115;
+  color: #ffffff;
+  border-color: #0f1115;
+}
+
+.habit-details-modal__calendar-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: transparent;
+  opacity: 0;
+}
+
+.habit-details-modal__calendar-dot--scheduled {
+  background: #E2E6F5;
+  opacity: 1;
+}
+
+.habit-details-modal__calendar-dot--completed {
+  background: #4C63FF;
+  opacity: 1;
 }
 
 .habit-details-modal__period {

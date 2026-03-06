@@ -380,6 +380,20 @@ const HabitDetailsModal = ({ isOpen, onClose, onEdit, habit, habits, statsDays =
     return new Set(items.filter((item) => (item.count || 0) >= targetGoal).map((item) => item.date))
   })()
   const todayValue = formatDateValue(new Date())
+  const createdDateValue = (() => {
+    const raw = habit?.createdAt || habit?.created_at || habit?.createdAt
+    if (!raw) return null
+    const datePart = String(raw).includes('T') ? String(raw).split('T')[0] : String(raw)
+    return datePart
+  })()
+  const endDateValue = (() => {
+    const raw = habit?.endDate || habit?.end_date
+    if (!raw) return null
+    const datePart = String(raw).includes('T') ? String(raw).split('T')[0] : String(raw)
+    return datePart
+  })()
+  const repeatDaysSet = new Set(habit?.repeatDays || [])
+  const fullWeekdays = ['Воскресенье', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота']
 
   const totalCompletionsCount = metricsHabit?.totalCompletions ?? 0
   const currentStreak = metricsHabit?.currentStreak ?? 0
@@ -599,6 +613,18 @@ const HabitDetailsModal = ({ isOpen, onClose, onEdit, habit, habits, statsDays =
                 const isToday = fullDate === todayValue
                 const isFuture = fullDate > todayValue
                 const isCompleted = !isFuture && completedCalendarDates.has(fullDate)
+                const isCreated = createdDateValue && fullDate === createdDateValue
+                const isEnd = endDateValue && fullDate === endDateValue
+                const weekdayName = fullWeekdays[new Date(calendarYear, calendarMonth, day).getDay()]
+                const isInRange = (!createdDateValue || fullDate >= createdDateValue)
+                  && (!endDateValue || fullDate <= endDateValue)
+                const isScheduled = isInRange && (repeatDaysSet.size === 0 || repeatDaysSet.has(weekdayName))
+                const showDot = isScheduled
+                const dotClass = isCompleted
+                  ? 'habit-details-modal__calendar-dot habit-details-modal__calendar-dot--completed'
+                  : showDot
+                    ? 'habit-details-modal__calendar-dot habit-details-modal__calendar-dot--scheduled'
+                    : 'habit-details-modal__calendar-dot'
 
                 return (
                   <div
@@ -607,9 +633,14 @@ const HabitDetailsModal = ({ isOpen, onClose, onEdit, habit, habits, statsDays =
                       isCompleted ? 'habit-details-modal__calendar-day--active' : ''
                     } ${
                       isToday ? 'habit-details-modal__calendar-day--today' : ''
+                    } ${
+                      isCreated ? 'habit-details-modal__calendar-day--created' : ''
+                    } ${
+                      isEnd ? 'habit-details-modal__calendar-day--end' : ''
                     }`}
                   >
-                    {day}
+                    <span className="habit-details-modal__calendar-number">{day}</span>
+                    <span className={dotClass}></span>
                   </div>
                 )
               })}
