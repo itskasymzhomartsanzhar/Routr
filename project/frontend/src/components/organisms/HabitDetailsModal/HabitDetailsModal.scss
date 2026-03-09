@@ -465,6 +465,16 @@
   gap: 10px;
 }
 
+.habit-details-modal__calendar-alert {
+  background: #0f1115;
+  color: #ffffff;
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  box-shadow: 0 6px 20px rgba(15, 17, 21, 0.18);
+}
+
 .habit-details-modal__period-inputs {
   display: flex;
   gap: 12px;

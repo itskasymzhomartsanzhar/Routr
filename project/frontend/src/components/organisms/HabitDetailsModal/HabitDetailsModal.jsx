@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import placeholderAvatar from '../../../assets/placeholder.png'
 import ENDPOINTS from '../../../utils/endpoints.js'
 import { request } from '../../../utils/api.js'
@@ -18,6 +18,8 @@ const HabitDetailsModal = ({ isOpen, onClose, onEdit, habit, habits, statsDays =
   const [isShareCopying, setIsShareCopying] = useState(false)
   const [rangeStart, setRangeStart] = useState('')
   const [rangeEnd, setRangeEnd] = useState('')
+  const [calendarAlert, setCalendarAlert] = useState('')
+  const alertTimeoutRef = useRef(null)
   const sourceHabitId = habit?.sourceHabitId ?? habit?.source_habit_id ?? null
   const mapHabitFromApi = (item) => ({
     id: item?.id,
@@ -51,6 +53,16 @@ const HabitDetailsModal = ({ isOpen, onClose, onEdit, habit, habits, statsDays =
     }, 300)
   }
 
+  const showCalendarAlert = (message) => {
+    setCalendarAlert(message)
+    if (alertTimeoutRef.current) {
+      clearTimeout(alertTimeoutRef.current)
+    }
+    alertTimeoutRef.current = setTimeout(() => {
+      setCalendarAlert('')
+    }, 2500)
+  }
+
   const parseDateOnly = (value) => {
     if (!value) return null
     const raw = String(value)
@@ -66,6 +78,9 @@ const HabitDetailsModal = ({ isOpen, onClose, onEdit, habit, habits, statsDays =
     }
     return () => {
       unlockBodyScroll()
+      if (alertTimeoutRef.current) {
+        clearTimeout(alertTimeoutRef.current)
+      }
     }
   }, [isOpen, isClosing])
 
@@ -380,6 +395,23 @@ const HabitDetailsModal = ({ isOpen, onClose, onEdit, habit, habits, statsDays =
     return new Set(items.filter((item) => (item.count || 0) >= targetGoal).map((item) => item.date))
   })()
   const todayValue = formatDateValue(new Date())
+  const handleRangeStartChange = (event) => {
+    const value = event.target.value
+    if (value && value > todayValue) {
+      showCalendarAlert('Нельзя выбирать будущие даты')
+      return
+    }
+    setRangeStart(value)
+  }
+
+  const handleRangeEndChange = (event) => {
+    const value = event.target.value
+    if (value && value > todayValue) {
+      showCalendarAlert('Нельзя выбирать будущие даты')
+      return
+    }
+    setRangeEnd(value)
+  }
   const createdDateValue = (() => {
     const raw = habit?.createdAt || habit?.created_at || habit?.createdAt
     if (!raw) return null
@@ -648,6 +680,11 @@ const HabitDetailsModal = ({ isOpen, onClose, onEdit, habit, habits, statsDays =
           </section>
 
           <section className="habit-details-modal__period">
+            {calendarAlert && (
+              <div className="habit-details-modal__calendar-alert">
+                {calendarAlert}
+              </div>
+            )}
             <div className="habit-details-modal__period-inputs">
               <label className="habit-details-modal__period-field">
                 <span className="habit-details-modal__period-label">Дата от</span>
@@ -657,7 +694,7 @@ const HabitDetailsModal = ({ isOpen, onClose, onEdit, habit, habits, statsDays =
                   value={rangeStart}
                   max={rangeEnd || statsMaxDate || undefined}
                   min={statsMinDate}
-                  onChange={(event) => setRangeStart(event.target.value)}
+                  onChange={handleRangeStartChange}
                 />
               </label>
               <label className="habit-details-modal__period-field">
@@ -668,7 +705,7 @@ const HabitDetailsModal = ({ isOpen, onClose, onEdit, habit, habits, statsDays =
                   value={rangeEnd}
                   min={rangeStart || statsMinDate || undefined}
                   max={statsMaxDate}
-                  onChange={(event) => setRangeEnd(event.target.value)}
+                  onChange={handleRangeEndChange}
                 />
               </label>
             </div>
