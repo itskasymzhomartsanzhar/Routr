@@ -376,7 +376,7 @@ const Profile = () => {
   }
 
   const handleCopySupportEmail = async () => {
-    const email = 'pro.metey@mail.ru'
+    const email = 'routr_bot@mail.ru'
     try {
       await navigator.clipboard.writeText(email)
       setShareToast({ visible: true, type: 'success', message: 'Адрес скопирован' })
@@ -699,7 +699,7 @@ const Profile = () => {
         <div className="profile__support-overlay" onClick={handleCloseSupport}>
           <div className="profile__support-modal" onClick={(event) => event.stopPropagation()}>
             <div className="profile__support-title">Напишите нам на почту</div>
-            <div className="profile__support-email">pro.metey@mail.ru</div>
+            <div className="profile__support-email">routr_bot@mail.ru</div>
             <button className="profile__support-copy" type="button" onClick={handleCopySupportEmail}>
               Скопировать адрес
             </button>
