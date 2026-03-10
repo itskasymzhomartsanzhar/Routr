@@ -365,26 +365,6 @@ const Profile = () => {
     }
   }
 
-  const handleSupportClick = async (event) => {
-    event.preventDefault()
-    const email = 'pro.metey@mail.ru'
-    try {
-      window.location.href = `mailto:${email}`
-    } catch (error) {
-      // noop
-    }
-    try {
-      if (navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(email)
-        setShareToast({ visible: true, type: 'success', message: 'Адрес поддержки скопирован' })
-      } else {
-        setShareToast({ visible: true, type: 'success', message: 'Напишите в поддержку: pro.metey@mail.ru' })
-      }
-    } catch (error) {
-      setShareToast({ visible: true, type: 'error', message: 'Не удалось открыть почту. Адрес: pro.metey@mail.ru' })
-    }
-    setTimeout(() => setShareToast({ visible: false, type: 'success', message: '' }), 2200)
-  }
 
   return (
     <div className={`profile ${isSettingsOpen || isSettingsClosing ? 'profile--modal-open' : ''}`}>
@@ -671,7 +651,7 @@ const Profile = () => {
                     </span>
                   </a>
                   <div className="profile__settings-divider"></div>
-                  <a className="profile__settings-link" href="mailto:pro.metey@mail.ru" onClick={handleSupportClick}>
+                  <a className="profile__settings-link" href="mailto:pro.metey@mail.ru">
                     <span className="profile__settings-icon profile__settings-icon--muted">
                       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
 <path d="M2.97339 17.2747V9.4C2.97339 7.15979 2.97339 6.03969 3.40548 5.18404C3.78555 4.43139 4.39202 3.81947 5.13796 3.43597C5.98599 3 7.09611 3 9.31636 3H14.47C16.6903 3 17.8004 3 18.6484 3.43597C19.3944 3.81947 20.0008 4.43139 20.3809 5.18404C20.813 6.03969 20.813 7.15979 20.813 9.4V10.6C20.813 12.8402 20.813 13.9603 20.3809 14.816C20.0008 15.5686 19.3944 16.1805 18.6484 16.564C17.8004 17 16.6903 17 14.47 17H10.267C9.77021 17 9.52183 17 9.28876 17.0578C9.08214 17.109 8.88505 17.1935 8.70505 17.3079C8.502 17.4371 8.32954 17.6174 7.98462 17.9781L7.06377 18.9411C5.7852 20.2782 5.14592 20.9468 4.59522 20.9975C4.11758 21.0415 3.64823 20.8503 3.33478 20.484C2.97339 20.0617 2.97339 19.1327 2.97339 17.2747Z" fill="#CDCDD0"/>
