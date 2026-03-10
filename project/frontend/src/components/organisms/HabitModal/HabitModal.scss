@@ -555,6 +555,8 @@
     font-size: 16px;
     font-weight: 600;
     color: #0F1F35;
+    position: relative;
+    z-index: 1;
   }
 
   &__date-placeholder {
@@ -568,10 +570,12 @@
 
   &__date-input {
     position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
     opacity: 0;
-    pointer-events: none;
-    height: 0;
-    width: 0;
+    cursor: pointer;
+    z-index: 2;
   }
 
   &__submit-wrapper {
