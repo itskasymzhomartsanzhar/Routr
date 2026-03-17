@@ -27,6 +27,7 @@ export default {
     share: (id) => `/api/habits/${id}/share/`,
     participants: (id) => `/api/habits/${id}/participants/`,
     participantStats: (id) => `/api/habits/${id}/participant-stats/`,
+    participantsLeaderboard: (id) => `/api/habits/${id}/participants-leaderboard/`,
     copy: "/api/habits/copy/",
     publicHabits: "/api/habits/public/",
     stats: "/api/habits/stats/",

@@ -252,12 +252,12 @@ const Profile = () => {
     }
   }, [SETTINGS_DEBOUNCE_MS, buildLocalLeaderboardForParticipation, setBootstrapData, updateProfile])
 
-  const handlePremiumPurchase = async () => {
-    if (!premiumProduct?.id || isPremiumPaying) return
+  const handlePremiumPurchase = async (product) => {
+    if (!product?.id || isPremiumPaying) return
     setIsPremiumPaying(true)
     setPremiumStatus({ type: null, message: '' })
     try {
-      const result = await request.post(ENDPOINTS.payments.robokassaSendMessage, { product_id: premiumProduct.id })
+      const result = await request.post(ENDPOINTS.payments.robokassaSendMessage, { product_id: product.id })
       if (result?.status === 'offer_sent') {
         setPremiumStatus({ type: 'success', message: 'Сообщение для оплаты отправлено в Telegram' })
       } else {
@@ -325,15 +325,22 @@ const Profile = () => {
         year: '2-digit',
       })
     : ''
-  const premiumProduct = (() => {
+  const premiumProducts = (() => {
     const products = Array.isArray(bootstrap?.products) ? bootstrap.products : []
-    const byFlag = products.find((item) => item?.is_premium && String(item.currency || '').toUpperCase() === 'RUB')
-    if (byFlag) return byFlag
-    return products.find((item) => {
-      const name = String(item?.name || '').toLowerCase()
-      return (name.includes('premium') || name.includes('премиум')) && String(item.currency || '').toUpperCase() === 'RUB'
+    return products.filter((item) => {
+      if (!item?.is_premium) return false
+      if (String(item.currency || '').toUpperCase() !== 'RUB') return false
+      if (item?.is_active === false) return false
+      return true
     })
   })()
+  const yearlyPremiumProduct = premiumProducts.find((item) => {
+    const duration = Number(item?.duration_days || 0)
+    const name = String(item?.name || '').toLowerCase()
+    return duration >= 365 || name.includes('год') || name.includes('year')
+  })
+  const standardPremiumProduct = premiumProducts.find((item) => item?.id !== yearlyPremiumProduct?.id)
+    || yearlyPremiumProduct
   const botUsername = import.meta.env.VITE_TELEGRAM_BOT_USERNAME || 'Routr_bot'
 
   const handleShareProfile = async () => {
@@ -364,6 +371,10 @@ const Profile = () => {
       setShareToast({ visible: true, type: 'error', message: 'Не удалось скопировать ссылку' })
       setTimeout(() => setShareToast({ visible: false, type: 'success', message: '' }), 2200)
     }
+  }
+
+  const handleOpenOnboarding = () => {
+    window.dispatchEvent(new Event('routr:open-onboarding'))
   }
 
   const handleOpenSupport = (event) => {
@@ -493,18 +504,32 @@ const Profile = () => {
                 </div>
               ))}
             </div>
-            <button
-              className="profile__premium-cta"
-              type="button"
-              onClick={handlePremiumPurchase}
-              disabled={isPremiumPaying || !premiumProduct}
-            >
-              {isPremiumPaying
-                ? 'Отправляем...'
-                : premiumProduct
-                  ? `Подписаться за ${premiumProduct.price}₽`
-                  : 'Подписаться'}
-            </button>
+            <div className="profile__premium-actions">
+              <button
+                className="profile__premium-cta"
+                type="button"
+                onClick={() => handlePremiumPurchase(standardPremiumProduct)}
+                disabled={isPremiumPaying || !standardPremiumProduct}
+              >
+                {isPremiumPaying
+                  ? 'Отправляем...'
+                  : standardPremiumProduct
+                    ? `Подписаться за ${standardPremiumProduct.price}₽`
+                    : 'Подписаться'}
+              </button>
+              {yearlyPremiumProduct && yearlyPremiumProduct.id !== standardPremiumProduct?.id && (
+                <button
+                  className="profile__premium-cta profile__premium-cta--secondary"
+                  type="button"
+                  onClick={() => handlePremiumPurchase(yearlyPremiumProduct)}
+                  disabled={isPremiumPaying}
+                >
+                  {isPremiumPaying
+                    ? 'Отправляем...'
+                    : `На год за ${yearlyPremiumProduct.price}₽`}
+                </button>
+              )}
+            </div>
             {premiumStatus.message && (
               <div className={`profile__toast profile__toast--${premiumStatus.type || 'info'}`} style={{ marginTop: 12 }}>
                 {premiumStatus.message}
@@ -651,6 +676,22 @@ const Profile = () => {
               <section className="profile__settings-section">
                 <div className="profile__settings-section-title">Прочее</div>
                 <div className="profile__settings-card">
+                  <button className="profile__settings-link" type="button" onClick={handleOpenOnboarding}>
+                    <span className="profile__settings-icon profile__settings-icon--muted">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 2C6.486 2 2 6.262 2 11.5C2 15.341 4.354 18.63 7.73 20.05L7.7 22L10.392 20.706C10.914 20.829 11.454 20.9 12 20.9C17.514 20.9 22 16.638 22 11.4C22 6.162 17.514 2 12 2Z" fill="#CDCDD0"/>
+                        <path d="M12 6.5C10.43 6.5 9.167 7.64 9.167 9.07C9.167 9.53 9.544 9.9 10.01 9.9C10.476 9.9 10.853 9.53 10.853 9.07C10.853 8.56 11.36 8.13 12 8.13C12.64 8.13 13.147 8.56 13.147 9.07C13.147 9.51 12.874 9.81 12.25 10.21C11.53 10.67 11.167 11.12 11.167 11.85V12.05C11.167 12.52 11.544 12.89 12.01 12.89C12.476 12.89 12.853 12.52 12.853 12.05V11.97C12.853 11.58 12.997 11.38 13.446 11.09C14.256 10.57 14.833 10.03 14.833 9.07C14.833 7.64 13.57 6.5 12 6.5Z" fill="#040415"/>
+                        <path d="M12 15.2C11.49 15.2 11.07 15.6 11.07 16.1C11.07 16.6 11.49 17 12 17C12.51 17 12.93 16.6 12.93 16.1C12.93 15.6 12.51 15.2 12 15.2Z" fill="#040415"/>
+                      </svg>
+                    </span>
+                    <span className="profile__settings-text">Инструкция</span>
+                    <span className="profile__settings-arrow">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                        <path d="M9 6L15 12L9 18" stroke="#8B93A7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    </span>
+                  </button>
+                  <div className="profile__settings-divider"></div>
                   <a
                     className="profile__settings-link"
                     href="https://telegra.ph/PUBLICHNAYA-OFERTA-02-25-8"

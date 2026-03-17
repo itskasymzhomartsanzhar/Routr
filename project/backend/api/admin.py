@@ -2,6 +2,7 @@ from django.contrib import admin
 from django.contrib.auth.models import Group
 from django.utils.html import format_html
 from django.utils import timezone
+from .admin_site import admin_site
 from .models import (
     Category,
     Habit,
@@ -17,14 +18,14 @@ from .models import (
     XpTransaction,
 )
 
-admin.site.unregister(Group)
+admin_site.unregister(Group)
 
 
 
 
 
 
-@admin.register(User)
+@admin_site.register(User)
 class UserAdmin(admin.ModelAdmin):
     list_display = (
         'get_full_name',
@@ -93,7 +94,7 @@ class UserAdmin(admin.ModelAdmin):
     is_premium.short_description = 'Премиум'
 
 
-@admin.register(Product)
+@admin_site.register(Product)
 class ProductAdmin(admin.ModelAdmin):
     list_display = (
         "name",
@@ -112,7 +113,7 @@ class ProductAdmin(admin.ModelAdmin):
     readonly_fields = ("created_at",)
 
 
-@admin.register(Payment)
+@admin_site.register(Payment)
 class PaymentAdmin(admin.ModelAdmin):
     list_display = ("id", "provider", "invoice_id", "user", "product", "amount", "currency", "status", "paid_at", "created_at")
     list_filter = ("provider", "status", "currency", "created_at")
@@ -120,14 +121,14 @@ class PaymentAdmin(admin.ModelAdmin):
     readonly_fields = ("created_at", "updated_at", "paid_at")
 
 
-@admin.register(Category)
+@admin_site.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
     list_display = ("name", "created_at")
     search_fields = ("name",)
     readonly_fields = ("created_at",)
 
 
-@admin.register(Habit)
+@admin_site.register(Habit)
 class HabitAdmin(admin.ModelAdmin):
     list_display = ("title", "owner", "category", "goal", "visibility", "end_date", "is_archived", "copied_count", "share_count", "created_at")
     list_filter = ("visibility", "category", "is_archived", "created_at")
@@ -135,14 +136,14 @@ class HabitAdmin(admin.ModelAdmin):
     readonly_fields = ("created_at", "updated_at")
 
 
-@admin.register(HabitCompletion)
+@admin_site.register(HabitCompletion)
 class HabitCompletionAdmin(admin.ModelAdmin):
     list_display = ("habit", "date", "count")
     list_filter = ("date",)
     search_fields = ("habit__title", "habit__owner__username", "habit__owner__first_name")
 
 
-@admin.register(HabitCopy)
+@admin_site.register(HabitCopy)
 class HabitCopyAdmin(admin.ModelAdmin):
     list_display = ("source_habit", "user", "created_at")
     list_filter = ("created_at",)
@@ -152,7 +153,7 @@ class HabitCopyAdmin(admin.ModelAdmin):
 
 
 
-@admin.register(Quest)
+@admin_site.register(Quest)
 class QuestAdmin(admin.ModelAdmin):
     list_display = ("title", "group", "type", "xp", "target", "is_active", "order")
     list_filter = ("group", "type", "is_active")
@@ -160,7 +161,7 @@ class QuestAdmin(admin.ModelAdmin):
     ordering = ("group", "order")
 
 
-@admin.register(Title)
+@admin_site.register(Title)
 class TitleAdmin(admin.ModelAdmin):
     list_display = ("name", "level_min", "level_max", "requires_premium", "order")
     list_filter = ("requires_premium",)
@@ -168,7 +169,7 @@ class TitleAdmin(admin.ModelAdmin):
     ordering = ("order",)
 
 
-@admin.register(UserQuest)
+@admin_site.register(UserQuest)
 class UserQuestAdmin(admin.ModelAdmin):
     list_display = ("user", "quest", "completed_at", "xp_awarded")
     list_filter = ("completed_at",)
@@ -176,18 +177,17 @@ class UserQuestAdmin(admin.ModelAdmin):
     readonly_fields = ("completed_at",)
 
 
-@admin.register(XpTransaction)
+@admin_site.register(XpTransaction)
 class XpTransactionAdmin(admin.ModelAdmin):
     list_display = ("user", "week_start", "week_end", "xp", "created_at")
     list_filter = ("week_start", "week_end")
     search_fields = ("user__username", "user__first_name", "user__telegram_id")
     readonly_fields = ("created_at",)
 
-"""
-@admin.register(HabitShare)
+
+@admin_site.register(HabitShare)
 class HabitShareAdmin(admin.ModelAdmin):
     list_display = ("habit", "user", "created_at")
     list_filter = ("created_at",)
     search_fields = ("habit__title", "user__username", "user__first_name")
     readonly_fields = ("created_at",)
-"""

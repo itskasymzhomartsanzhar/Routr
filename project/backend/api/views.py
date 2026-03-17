@@ -15,6 +15,7 @@ from django.conf import settings
 from django.core.cache import cache
 from django.db import transaction
 from django.db.models import Case, Count, Exists, F, IntegerField, OuterRef, Prefetch, Q, Sum, When
+from django.db.models.functions import Coalesce
 from django.http import HttpResponse, HttpResponseRedirect
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
@@ -2633,6 +2634,59 @@ class HabitViewSet(viewsets.ModelViewSet):
 
         serializer = self.get_serializer(participant_habit, context=self.get_serializer_context())
         return Response(serializer.data)
+
+    @action(detail=True, methods=["get"], url_path="participants-leaderboard")
+    def participants_leaderboard(self, request, pk=None):
+        habit = self.get_object()
+        source_habit = habit
+        if habit.source_habit_id:
+            try:
+                source_habit = Habit.objects.select_related("owner").get(pk=habit.source_habit_id)
+            except Habit.DoesNotExist:
+                return Response({"total": 0, "items": []})
+
+        has_copies = HabitCopy.objects.filter(source_habit=source_habit).exists()
+        if source_habit.visibility != "Публичный" and not has_copies and not habit.source_habit_id:
+            return Response({"total": 0, "items": []})
+
+        try:
+            limit = int(request.query_params.get("limit", 10) or 10)
+        except (TypeError, ValueError):
+            limit = 10
+        limit = max(1, min(limit, 50))
+
+        habits = (
+            Habit.objects.filter(Q(pk=source_habit.pk) | Q(source_habit_id=source_habit.pk))
+            .select_related("owner")
+            .annotate(total_completed=Coalesce(Sum("completions__count"), 0))
+        )
+
+        by_user = {}
+        for item in habits:
+            owner = item.owner
+            entry = {
+                "user_id": owner.id,
+                "name": owner.first_name or owner.username or f"User {owner.id}",
+                "avatar": owner.photo_url,
+                "is_premium": _is_premium_active(owner),
+                "completed": int(item.total_completed or 0),
+                "is_author": item.id == source_habit.id,
+            }
+            existing = by_user.get(owner.id)
+            if not existing or entry["completed"] > existing["completed"]:
+                by_user[owner.id] = entry
+
+        items = sorted(
+            by_user.values(),
+            key=lambda row: (-row["completed"], row["name"], row["user_id"]),
+        )
+        for idx, row in enumerate(items, start=1):
+            row["rank"] = idx
+
+        return Response({
+            "total": len(items),
+            "items": items[:limit],
+        })
 
     @action(detail=True, methods=["get"], url_path="stats")
     def stats(self, request, pk=None):

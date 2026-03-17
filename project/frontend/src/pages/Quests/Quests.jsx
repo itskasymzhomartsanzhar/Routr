@@ -10,6 +10,7 @@ const GROUPS = [
   { id: 'leader', label: 'Лидер' },
   { id: 'mentor', label: 'Наставник' }
 ]
+
 const PRIVILEGE_LABELS = {
   daily_active_habits: 'Активных привычек в день',
   total_habits: 'Всего привычек',
@@ -85,6 +86,7 @@ const Quests = () => {
             </button>
           ))}
         </div>
+
         <div className="quests__grid">
           {activeItems.map((quest) => (
             <div

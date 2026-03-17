@@ -313,7 +313,6 @@
   }
 
   &__premium-cta {
-    margin-top: 18px;
     width: 100%;
     border: none;
     border-radius: 999px;
@@ -323,6 +322,19 @@
     font-weight: 600;
     font-size: 15px;
     cursor: pointer;
+  }
+
+  &__premium-actions {
+    margin-top: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  &__premium-cta--secondary {
+    background: rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.35);
   }
 
   &__premium-close {

@@ -1,0 +1,178 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block extrastyle %}
+  {{ block.super }}
+  <style>
+    .routr-dashboard {
+      display: flex;
+      gap: 24px;
+      align-items: flex-start;
+    }
+    .routr-dashboard__apps {
+      flex: 1 1 60%;
+      min-width: 320px;
+    }
+    .routr-dashboard__side {
+      flex: 0 0 360px;
+      max-width: 420px;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .routr-kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .routr-kpi-card {
+      background: #ffffff;
+      border-radius: 16px;
+      padding: 14px;
+      border: 1px solid #e6e9f5;
+      box-shadow: 0 6px 18px rgba(15, 31, 53, 0.08);
+    }
+    .routr-kpi-label {
+      font-size: 12px;
+      color: #8b93a7;
+      margin-bottom: 6px;
+    }
+    .routr-kpi-value {
+      font-size: 18px;
+      font-weight: 700;
+      color: #0f1f35;
+    }
+    .routr-chart-card {
+      background: #ffffff;
+      border-radius: 18px;
+      padding: 16px;
+      border: 1px solid #e6e9f5;
+      box-shadow: 0 6px 18px rgba(15, 31, 53, 0.08);
+    }
+    .routr-chart-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #0f1f35;
+      margin-bottom: 10px;
+    }
+    .routr-chart {
+      width: 100%;
+      height: 180px;
+    }
+    @media (max-width: 1024px) {
+      .routr-dashboard {
+        flex-direction: column;
+      }
+      .routr-dashboard__side {
+        width: 100%;
+        max-width: none;
+      }
+      .routr-kpi-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+    }
+    @media (max-width: 720px) {
+      .routr-kpi-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .routr-chart {
+        height: 160px;
+      }
+    }
+  </style>
+{% endblock %}
+
+{% block extrahead %}
+  {{ block.super }}
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+{% endblock %}
+
+{% block content %}
+  <div class="routr-dashboard">
+    <div class="routr-dashboard__apps">
+      {% if app_list %}
+        {% include "admin/app_list.html" with app_list=app_list show_changelinks=True %}
+      {% else %}
+        <p>{% trans "You don't have permission to view or edit anything." %}</p>
+      {% endif %}
+    </div>
+    <aside class="routr-dashboard__side">
+      <div class="routr-kpi-grid">
+        <div class="routr-kpi-card">
+          <div class="routr-kpi-label">Пользователи</div>
+          <div class="routr-kpi-value">{{ kpi.total_users }}</div>
+        </div>
+        <div class="routr-kpi-card">
+          <div class="routr-kpi-label">Новые за 7 дней</div>
+          <div class="routr-kpi-value">{{ kpi.new_users_week }}</div>
+        </div>
+        <div class="routr-kpi-card">
+          <div class="routr-kpi-label">Активные привычки</div>
+          <div class="routr-kpi-value">{{ kpi.active_habits }}</div>
+        </div>
+        <div class="routr-kpi-card">
+          <div class="routr-kpi-label">Выполнений за 7 дней</div>
+          <div class="routr-kpi-value">{{ kpi.completions_week }}</div>
+        </div>
+        <div class="routr-kpi-card">
+          <div class="routr-kpi-label">Оплат за 30 дней</div>
+          <div class="routr-kpi-value">{{ kpi.paid_30 }}</div>
+        </div>
+        <div class="routr-kpi-card">
+          <div class="routr-kpi-label">Премиум активные</div>
+          <div class="routr-kpi-value">{{ kpi.premium_active }}</div>
+        </div>
+      </div>
+
+      <div class="routr-chart-card">
+        <div class="routr-chart-title">Новые пользователи (14 дней)</div>
+        <canvas id="routr-users-chart" class="routr-chart"></canvas>
+      </div>
+      <div class="routr-chart-card">
+        <div class="routr-chart-title">Новые привычки (14 дней)</div>
+        <canvas id="routr-habits-chart" class="routr-chart"></canvas>
+      </div>
+      <div class="routr-chart-card">
+        <div class="routr-chart-title">Выполнения привычек (14 дней)</div>
+        <canvas id="routr-completions-chart" class="routr-chart"></canvas>
+      </div>
+    </aside>
+  </div>
+
+  <script>
+    (function () {
+      if (!window.Chart) return;
+      const labels = {{ chart_labels|safe }};
+      const usersData = {{ chart_new_users|safe }};
+      const habitsData = {{ chart_new_habits|safe }};
+      const completionsData = {{ chart_completions|safe }};
+
+      const baseOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { grid: { display: false }, ticks: { color: '#8B93A7', font: { size: 10 } } },
+          y: { grid: { color: '#EEF1F6' }, ticks: { color: '#8B93A7', font: { size: 10 }, precision: 0 } },
+        },
+      };
+
+      new Chart(document.getElementById('routr-users-chart'), {
+        type: 'line',
+        data: { labels, datasets: [{ data: usersData, borderColor: '#3843FF', backgroundColor: 'rgba(56,67,255,0.15)', fill: true, tension: 0.4 }] },
+        options: baseOptions,
+      });
+      new Chart(document.getElementById('routr-habits-chart'), {
+        type: 'line',
+        data: { labels, datasets: [{ data: habitsData, borderColor: '#22C55E', backgroundColor: 'rgba(34,197,94,0.15)', fill: true, tension: 0.4 }] },
+        options: baseOptions,
+      });
+      new Chart(document.getElementById('routr-completions-chart'), {
+        type: 'bar',
+        data: { labels, datasets: [{ data: completionsData, backgroundColor: '#F59E0B' }] },
+        options: baseOptions,
+      });
+    })();
+  </script>
+{% endblock %}

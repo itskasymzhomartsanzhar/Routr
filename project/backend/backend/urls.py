@@ -1,18 +1,12 @@
 
-from django.contrib import admin
 from django.conf import settings
 from django.conf.urls.static import static
 from django.urls import include, path
-
-
-admin.site.site_header = 'Трекер привычек Routr'
-admin.site.index_title = 'Администрирование Telegram Bot Mini App Routr'
-
-admin.site.site_url = 'https://t.me/Routr_bot'
+from api.admin_site import admin_site
 
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
+    path('admin/', admin_site.urls),
     path("v1/api/", include("api.urls")),
 ]
 

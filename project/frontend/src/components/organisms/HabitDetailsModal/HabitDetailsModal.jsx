@@ -11,6 +11,8 @@ const HabitDetailsModal = ({ isOpen, onClose, onEdit, habit, habits, statsDays =
   const [calendarDate, setCalendarDate] = useState(() => new Date())
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false)
   const [participants, setParticipants] = useState([])
+  const [participantsLeaderboard, setParticipantsLeaderboard] = useState([])
+  const [isLeaderboardLoading, setIsLeaderboardLoading] = useState(false)
   const [selectedUserId, setSelectedUserId] = useState(null)
   const [selectedParticipantHabit, setSelectedParticipantHabit] = useState(null)
   const [isShareOpen, setIsShareOpen] = useState(false)
@@ -153,6 +155,34 @@ const HabitDetailsModal = ({ isOpen, onClose, onEdit, habit, habits, statsDays =
       cancelled = true
     }
   }, [isOpen, habit?.id, sourceHabitId, currentUserId])
+
+  useEffect(() => {
+    if (!isOpen || !habit?.id) {
+      setParticipantsLeaderboard([])
+      return
+    }
+    let cancelled = false
+    const loadLeaderboard = async () => {
+      setIsLeaderboardLoading(true)
+      try {
+        const response = await request.get(ENDPOINTS.habits.participantsLeaderboard(habit.id), { limit: 10 })
+        if (cancelled) return
+        const items = Array.isArray(response?.items) ? response.items : []
+        setParticipantsLeaderboard(items)
+      } catch (error) {
+        if (cancelled) return
+        setParticipantsLeaderboard([])
+      } finally {
+        if (!cancelled) {
+          setIsLeaderboardLoading(false)
+        }
+      }
+    }
+    loadLeaderboard()
+    return () => {
+      cancelled = true
+    }
+  }, [isOpen, habit?.id])
 
   useEffect(() => {
     if (!isOpen || !habit?.id || !selectedUserId) {
@@ -602,6 +632,35 @@ const HabitDetailsModal = ({ isOpen, onClose, onEdit, habit, habits, statsDays =
               </div>
             </div>
           </section>
+
+          {(participantsLeaderboard.length > 0 || isLeaderboardLoading) && (
+            <section className="habit-details-modal__leaderboard">
+              <div className="habit-details-modal__leaderboard-title">Рейтинг соучастников</div>
+              <div className="habit-details-modal__leaderboard-list">
+                {isLeaderboardLoading && (
+                  <div className="habit-details-modal__leaderboard-placeholder">Загрузка рейтинга...</div>
+                )}
+                {!isLeaderboardLoading && participantsLeaderboard.map((item) => (
+                  <div
+                    key={item.user_id}
+                    className={`habit-details-modal__leaderboard-row ${
+                      item.user_id === currentUserId ? 'habit-details-modal__leaderboard-row--me' : ''
+                    }`}
+                  >
+                    <div className="habit-details-modal__leaderboard-rank">{item.rank}</div>
+                    <div
+                      className={`habit-details-modal__leaderboard-avatar ${
+                        item.is_premium ? 'habit-details-modal__leaderboard-avatar--premium' : ''
+                      }`}
+                      style={{ backgroundImage: `url(${item.avatar || placeholderAvatar})` }}
+                    ></div>
+                    <div className="habit-details-modal__leaderboard-name">{item.name}</div>
+                    <div className="habit-details-modal__leaderboard-count">{item.completed} раз</div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
 
           <section className="habit-details-modal__calendar">
             <div className="habit-details-modal__calendar-header">
