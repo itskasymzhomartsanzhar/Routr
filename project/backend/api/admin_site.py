@@ -2,6 +2,7 @@ import json
 from datetime import timedelta
 
 from django.contrib.admin import AdminSite
+from django.db import connection
 from django.db.models import Count, Q, Sum
 from django.db.models.functions import Coalesce, TruncDate
 from django.utils import timezone
@@ -40,35 +41,47 @@ class RoutrAdminSite(AdminSite):
         chart_start = today - timedelta(days=chart_days - 1)
         labels = [(chart_start + timedelta(days=i)) for i in range(chart_days)]
 
-        users_by_day = {
-            row["day"]: row["total"]
-            for row in (
-                User.objects.filter(date_joined__date__gte=chart_start)
-                .annotate(day=TruncDate("date_joined"))
-                .values("day")
-                .annotate(total=Count("id"))
-            )
-        }
+        def normalize_day(value):
+            if isinstance(value, date):
+                return value
+            if isinstance(value, str):
+                try:
+                    return date.fromisoformat(value)
+                except ValueError:
+                    return None
+            return None
 
-        habits_by_day = {
-            row["day"]: row["total"]
-            for row in (
-                Habit.objects.filter(created_at__date__gte=chart_start)
-                .annotate(day=TruncDate("created_at"))
-                .values("day")
-                .annotate(total=Count("id"))
-            )
-        }
+        def aggregate_by_day(qs, date_field, sum_field=None):
+            if connection.vendor == "sqlite":
+                select = {"day": f"date({date_field})"}
+                rows = qs.extra(select=select).values("day")
+            else:
+                rows = qs.annotate(day=TruncDate(date_field)).values("day")
+            if sum_field:
+                rows = rows.annotate(total=Coalesce(Sum(sum_field), 0))
+            else:
+                rows = rows.annotate(total=Count("id"))
+            result = {}
+            for row in rows:
+                day = normalize_day(row.get("day"))
+                if not day:
+                    continue
+                result[day] = int(row.get("total") or 0)
+            return result
 
-        completions_by_day = {
-            row["day"]: row["total"]
-            for row in (
-                HabitCompletion.objects.filter(date__gte=chart_start)
-                .annotate(day=TruncDate("date"))
-                .values("day")
-                .annotate(total=Coalesce(Sum("count"), 0))
-            )
-        }
+        users_by_day = aggregate_by_day(
+            User.objects.filter(date_joined__date__gte=chart_start),
+            "date_joined",
+        )
+        habits_by_day = aggregate_by_day(
+            Habit.objects.filter(created_at__date__gte=chart_start),
+            "created_at",
+        )
+        completions_by_day = aggregate_by_day(
+            HabitCompletion.objects.filter(date__gte=chart_start),
+            "date",
+            sum_field="count",
+        )
 
         chart_labels = [day.strftime("%d.%m") for day in labels]
         chart_new_users = [int(users_by_day.get(day, 0)) for day in labels]
