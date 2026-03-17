@@ -1,5 +1,4 @@
 import BottomNav from '../../components/organisms/Menu/Menu.jsx'
-import logo from '../../assets/logo.png'
 import './Preloader.scss'
 
 const Preloader = () => {
@@ -7,7 +6,7 @@ const Preloader = () => {
     <div className="preloader">
       <div className="preloader__content" aria-label="Загрузка">
         <div className="preloader__logo">
-          <img src={logo} alt="Routr" />
+          <img src="/logo.png" alt="Routr" />
         </div>
         <div className="preloader__name">Routr</div>
       </div>
