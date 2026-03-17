@@ -18,7 +18,10 @@ from .models import (
     XpTransaction,
 )
 
-admin_site.unregister(Group)
+try:
+    admin_site.unregister(Group)
+except admin.sites.NotRegistered:
+    pass
 
 
 
