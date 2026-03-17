@@ -1,5 +1,5 @@
 import json
-from datetime import timedelta
+from datetime import date, timedelta
 
 from django.contrib.admin import AdminSite
 from django.db import connection
