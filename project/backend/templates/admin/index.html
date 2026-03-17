@@ -9,6 +9,12 @@
       gap: 24px;
       align-items: flex-start;
     }
+    #nav-sidebar {
+      display: none;
+    }
+    .main {
+      margin-left: 0;
+    }
     .routr-dashboard__apps {
       flex: 1 1 60%;
       min-width: 320px;
@@ -63,6 +69,12 @@
     @media (max-width: 1024px) {
       .routr-dashboard {
         flex-direction: column;
+      }
+      .routr-dashboard__side {
+        order: -1;
+      }
+      .routr-dashboard__apps {
+        order: 1;
       }
       .routr-dashboard__side {
         width: 100%;

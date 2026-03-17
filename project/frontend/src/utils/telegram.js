@@ -6,6 +6,10 @@ export const getTelegramWebApp = () => {
 export const initTelegramWebApp = () => {
   const webApp = getTelegramWebApp()
   if (!webApp) return null
+  const hasProxy = typeof window !== 'undefined'
+    && window.TelegramGameProxy
+    && typeof window.TelegramGameProxy.receiveEvent === 'function'
+  if (!hasProxy) return webApp
   try {
     webApp.ready()
     webApp.expand()
