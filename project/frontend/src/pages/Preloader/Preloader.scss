@@ -12,61 +12,32 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 14px;
+    gap: 12px;
     text-align: center;
   }
 
-  &__spinner {
-    width: 56px;
-    height: 56px;
-    animation: preloaderSpin 0.9s linear infinite;
+  &__logo {
+    width: 86px;
+    height: 86px;
+    border-radius: 24px;
+    overflow: hidden;
+    background: #F4F6FF;
     display: flex;
     align-items: center;
     justify-content: center;
+    box-shadow: 0 10px 28px rgba(15, 31, 53, 0.18);
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
   }
 
-  &__spinner-svg {
-    width: 100%;
-    height: 100%;
-    transform: rotate(-90deg);
-  }
-
-  &__spinner-track {
-    fill: none;
-    stroke: #EEF0F3;
-    stroke-width: 8;
-  }
-
-  &__spinner-fill {
-    fill: none;
-    stroke: #3843FF;
-    stroke-width: 8;
-    stroke-linecap: round;
-    stroke-dasharray: 110 40;
-  }
-
-  &__quote {
-    font-size: 17px;
-    font-weight: 400;
-    color: #8B93A7;
-    line-height: 1.4;
-    max-width: 100%;
-    margin: 0 33px;
-    text-align: center;
-  }
-
-  &__author {
-    font-size: 17px;
-    font-weight: 400;
-    color: #8B93A7;
-  }
-}
-
-@keyframes preloaderSpin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
+  &__name {
+    font-size: 18px;
+    font-weight: 600;
+    color: #0f1f35;
+    letter-spacing: 0.02em;
   }
 }

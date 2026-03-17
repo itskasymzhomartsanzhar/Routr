@@ -28,7 +28,7 @@ except admin.sites.NotRegistered:
 
 
 
-@admin_site.register(User)
+@admin.register(User, site=admin_site)
 class UserAdmin(admin.ModelAdmin):
     list_display = (
         'get_full_name',
@@ -97,7 +97,7 @@ class UserAdmin(admin.ModelAdmin):
     is_premium.short_description = 'Премиум'
 
 
-@admin_site.register(Product)
+@admin.register(Product, site=admin_site)
 class ProductAdmin(admin.ModelAdmin):
     list_display = (
         "name",
@@ -116,7 +116,7 @@ class ProductAdmin(admin.ModelAdmin):
     readonly_fields = ("created_at",)
 
 
-@admin_site.register(Payment)
+@admin.register(Payment, site=admin_site)
 class PaymentAdmin(admin.ModelAdmin):
     list_display = ("id", "provider", "invoice_id", "user", "product", "amount", "currency", "status", "paid_at", "created_at")
     list_filter = ("provider", "status", "currency", "created_at")
@@ -124,14 +124,14 @@ class PaymentAdmin(admin.ModelAdmin):
     readonly_fields = ("created_at", "updated_at", "paid_at")
 
 
-@admin_site.register(Category)
+@admin.register(Category, site=admin_site)
 class CategoryAdmin(admin.ModelAdmin):
     list_display = ("name", "created_at")
     search_fields = ("name",)
     readonly_fields = ("created_at",)
 
 
-@admin_site.register(Habit)
+@admin.register(Habit, site=admin_site)
 class HabitAdmin(admin.ModelAdmin):
     list_display = ("title", "owner", "category", "goal", "visibility", "end_date", "is_archived", "copied_count", "share_count", "created_at")
     list_filter = ("visibility", "category", "is_archived", "created_at")
@@ -139,14 +139,14 @@ class HabitAdmin(admin.ModelAdmin):
     readonly_fields = ("created_at", "updated_at")
 
 
-@admin_site.register(HabitCompletion)
+@admin.register(HabitCompletion, site=admin_site)
 class HabitCompletionAdmin(admin.ModelAdmin):
     list_display = ("habit", "date", "count")
     list_filter = ("date",)
     search_fields = ("habit__title", "habit__owner__username", "habit__owner__first_name")
 
 
-@admin_site.register(HabitCopy)
+@admin.register(HabitCopy, site=admin_site)
 class HabitCopyAdmin(admin.ModelAdmin):
     list_display = ("source_habit", "user", "created_at")
     list_filter = ("created_at",)
@@ -156,7 +156,7 @@ class HabitCopyAdmin(admin.ModelAdmin):
 
 
 
-@admin_site.register(Quest)
+@admin.register(Quest, site=admin_site)
 class QuestAdmin(admin.ModelAdmin):
     list_display = ("title", "group", "type", "xp", "target", "is_active", "order")
     list_filter = ("group", "type", "is_active")
@@ -164,7 +164,7 @@ class QuestAdmin(admin.ModelAdmin):
     ordering = ("group", "order")
 
 
-@admin_site.register(Title)
+@admin.register(Title, site=admin_site)
 class TitleAdmin(admin.ModelAdmin):
     list_display = ("name", "level_min", "level_max", "requires_premium", "order")
     list_filter = ("requires_premium",)
@@ -172,7 +172,7 @@ class TitleAdmin(admin.ModelAdmin):
     ordering = ("order",)
 
 
-@admin_site.register(UserQuest)
+@admin.register(UserQuest, site=admin_site)
 class UserQuestAdmin(admin.ModelAdmin):
     list_display = ("user", "quest", "completed_at", "xp_awarded")
     list_filter = ("completed_at",)
@@ -180,7 +180,7 @@ class UserQuestAdmin(admin.ModelAdmin):
     readonly_fields = ("completed_at",)
 
 
-@admin_site.register(XpTransaction)
+@admin.register(XpTransaction, site=admin_site)
 class XpTransactionAdmin(admin.ModelAdmin):
     list_display = ("user", "week_start", "week_end", "xp", "created_at")
     list_filter = ("week_start", "week_end")
@@ -188,7 +188,7 @@ class XpTransactionAdmin(admin.ModelAdmin):
     readonly_fields = ("created_at",)
 
 
-@admin_site.register(HabitShare)
+@admin.register(HabitShare, site=admin_site)
 class HabitShareAdmin(admin.ModelAdmin):
     list_display = ("habit", "user", "created_at")
     list_filter = ("created_at",)
