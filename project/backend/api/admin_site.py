@@ -37,7 +37,11 @@ class RoutrAdminSite(AdminSite):
         ).count()
         premium_active = User.objects.filter(premium_expiration__gt=now).count()
 
-        chart_days = 14
+        try:
+            chart_days = int(request.GET.get("chart_days", 14))
+        except (TypeError, ValueError):
+            chart_days = 14
+        chart_days = max(7, min(chart_days, 90))
         chart_start = today - timedelta(days=chart_days - 1)
         labels = [(chart_start + timedelta(days=i)) for i in range(chart_days)]
 
@@ -97,6 +101,7 @@ class RoutrAdminSite(AdminSite):
                 "paid_30": paid_30,
                 "premium_active": premium_active,
             },
+            "chart_days": chart_days,
             "chart_labels": json.dumps(chart_labels),
             "chart_new_users": json.dumps(chart_new_users),
             "chart_new_habits": json.dumps(chart_new_habits),
