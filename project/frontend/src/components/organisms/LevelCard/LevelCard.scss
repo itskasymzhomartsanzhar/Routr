@@ -34,9 +34,24 @@
   }
 
   &__xp {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     font-size: 12px;
-    font-weight: 500;
+    font-weight: 600;
     color: #9B9BA1;
+  }
+
+  &__xp-icons {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+
+    img {
+      width: 22px;
+      height: 22px;
+      object-fit: contain;
+    }
   }
 
   &__progress-bar {

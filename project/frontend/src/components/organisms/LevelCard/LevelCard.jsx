@@ -1,6 +1,16 @@
+import boostXpIcon from '../../assets/shop/boostxp.png'
+import shieldIcon from '../../assets/shop/shit.png'
 import './LevelCard.scss'
 
-const LevelCard = ({ title = 'Новичок', level = 1, currentLevel = 1, targetLevel = 10, currentXP = 0 }) => {
+const LevelCard = ({
+  title = 'Новичок',
+  level = 1,
+  currentLevel = 1,
+  targetLevel = 10,
+  currentXP = 0,
+  xpBoostActive = false,
+  shieldActive = false,
+}) => {
   const safeTarget = Math.max(Number(targetLevel) || 1, 1)
   const safeCurrent = Math.max(Number(currentLevel) || 0, 0)
   const clampedCurrent = Math.min(safeCurrent, safeTarget)
@@ -13,7 +23,13 @@ const LevelCard = ({ title = 'Новичок', level = 1, currentLevel = 1, targ
           <h3 className="level-card__title">{title}</h3>
           <p className="level-card__level">Уровень {level}</p>
         </div>
-        <div className="level-card__xp">{currentXP}XP</div>
+        <div className="level-card__xp">
+          <div className="level-card__xp-icons">
+            {xpBoostActive && <img src={boostXpIcon} alt="XP boost" />}
+            {shieldActive && <img src={shieldIcon} alt="Streak shield" />}
+          </div>
+          <span>{currentXP}XP</span>
+        </div>
       </div>
       <div className="level-card__progress-bar">
         <div

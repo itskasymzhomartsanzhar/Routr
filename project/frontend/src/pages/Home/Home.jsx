@@ -321,6 +321,10 @@ const Home = () => {
   const titleName = currentTitle?.name || 'Новичок'
   const targetLevel = Math.max(Number(currentTitle?.level_max ?? levelValue) || levelValue, 1)
   const currentLevelForProgress = Math.min(Math.max(levelValue, 1), targetLevel)
+  const xpBoostMultiplier = Number(liveUser?.xp_boost_multiplier ?? 1)
+  const xpBoostExpiresAt = liveUser?.xp_boost_expires_at ? new Date(liveUser.xp_boost_expires_at) : null
+  const xpBoostActive = xpBoostMultiplier > 1 && (!xpBoostExpiresAt || xpBoostExpiresAt > new Date())
+  const shieldActive = Number(liveUser?.streak_shields ?? 0) > 0
   const defaultCategoryId =
     categories.find((category) => category.name === 'Личное')?.id ?? categories[0]?.id ?? null
   const publicHabitsCount = allHabits.filter((habit) => habit.visibility === 'Публичный').length
@@ -338,6 +342,8 @@ const Home = () => {
         currentLevel={currentLevelForProgress}
         targetLevel={targetLevel}
         currentXP={xpValue}
+        xpBoostActive={xpBoostActive}
+        shieldActive={shieldActive}
       />
       <CalendarStrip selectedDate={selectedDate} onSelectDate={setSelectedDate} />
       <HabitsSection
