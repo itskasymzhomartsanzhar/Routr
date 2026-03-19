@@ -1,5 +1,5 @@
-import boostXpIcon from '../../assets/shop/boostxp.png'
-import shieldIcon from '../../assets/shop/shit.png'
+import boostXpIcon from '../../../assets/shop/boostxp.png'
+import shieldIcon from '../../../assets/shop/shit.png'
 import './LevelCard.scss'
 
 const LevelCard = ({
