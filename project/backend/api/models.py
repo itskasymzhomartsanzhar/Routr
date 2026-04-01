@@ -60,6 +60,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     participation_in_ratings = models.BooleanField("Участие в рейтингах", default=True)
     balance_wheel = models.BooleanField("Только публичные привычки в колесе баланса", default=False)
     payment_offer_accepted = models.BooleanField("Согласие с офертой", default=False)
+    onboarding_completed = models.BooleanField("Обучение пройдено", default=False)
 
     level = models.BigIntegerField("Уровень", default=1)
     xp = models.BigIntegerField("Опыт", default=0)

@@ -29,6 +29,7 @@ class UserSerializer(serializers.ModelSerializer):
             "notification_quests",
             "participation_in_ratings",
             "balance_wheel",
+            "onboarding_completed",
             "level",
             "xp",
             "extra_habit_slots",

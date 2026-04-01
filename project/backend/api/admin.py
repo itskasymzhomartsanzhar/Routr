@@ -74,6 +74,7 @@ class UserAdmin(admin.ModelAdmin):
                 'notification_quests',
                 'participation_in_ratings',
                 'balance_wheel',
+                'onboarding_completed',
             )
         }),
         ('Права доступа', {
