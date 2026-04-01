@@ -636,6 +636,9 @@ const HabitDetailsModal = ({ isOpen, onClose, onEdit, habit, habits, statsDays =
           {(participantsLeaderboard.length > 0 || isLeaderboardLoading) && (
             <section className="habit-details-modal__leaderboard">
               <div className="habit-details-modal__leaderboard-title">Рейтинг соучастников</div>
+              <div className="habit-details-modal__leaderboard-subtitle">
+                Здесь можно посмотреть, сколько раз эту привычку сделали друзья.
+              </div>
               <div className="habit-details-modal__leaderboard-list">
                 {isLeaderboardLoading && (
                   <div className="habit-details-modal__leaderboard-placeholder">Загрузка рейтинга...</div>
@@ -710,12 +713,11 @@ const HabitDetailsModal = ({ isOpen, onClose, onEdit, habit, habits, statsDays =
                 const isInRange = (!createdDateValue || fullDate >= createdDateValue)
                   && (!endDateValue || fullDate <= endDateValue)
                 const isScheduled = isInRange && (repeatDaysSet.size === 0 || repeatDaysSet.has(weekdayName))
-                const showDot = isScheduled
                 const dotClass = isCompleted
                   ? 'habit-details-modal__calendar-dot habit-details-modal__calendar-dot--completed'
-                  : showDot
+                  : isScheduled
                     ? 'habit-details-modal__calendar-dot habit-details-modal__calendar-dot--scheduled'
-                    : 'habit-details-modal__calendar-dot'
+                    : 'habit-details-modal__calendar-dot habit-details-modal__calendar-dot--empty'
 
                 return (
                   <div
@@ -735,6 +737,28 @@ const HabitDetailsModal = ({ isOpen, onClose, onEdit, habit, habits, statsDays =
                   </div>
                 )
               })}
+            </div>
+          </section>
+
+          <section className="habit-details-modal__legend">
+            <div className="habit-details-modal__legend-title">Что означают цвета в календаре</div>
+            <div className="habit-details-modal__legend-list">
+              <div className="habit-details-modal__legend-item">
+                <span className="habit-details-modal__legend-dot habit-details-modal__legend-dot--empty"></span>
+                <span className="habit-details-modal__legend-text">Серая: не было привычки</span>
+              </div>
+              <div className="habit-details-modal__legend-item">
+                <span className="habit-details-modal__legend-dot habit-details-modal__legend-dot--completed"></span>
+                <span className="habit-details-modal__legend-text">Фиолетовая: привычка выполнена в этот день</span>
+              </div>
+              <div className="habit-details-modal__legend-item">
+                <span className="habit-details-modal__legend-today">19</span>
+                <span className="habit-details-modal__legend-text">Черный кружок: сегодняшний день</span>
+              </div>
+              <div className="habit-details-modal__legend-item">
+                <span className="habit-details-modal__legend-dot habit-details-modal__legend-dot--scheduled"></span>
+                <span className="habit-details-modal__legend-text">Светлая: привычка не выполнена в этот день</span>
+              </div>
             </div>
           </section>
 

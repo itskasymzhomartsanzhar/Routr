@@ -256,7 +256,6 @@ function App() {
           <div className="tutorial__tooltip" style={getTooltipStyle()}>
             <div className="tutorial__title">{tutorialStep.title}</div>
             <div className="tutorial__text">{tutorialStep.text}</div>
-            <div className="tutorial__hint">Нажмите в любом месте, чтобы продолжить</div>
           </div>
         </div>
       )}
