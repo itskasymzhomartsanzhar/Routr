@@ -25,7 +25,6 @@
   position: relative !important;
   z-index: 3012 !important;
   border-radius: 16px;
-  box-shadow: 0 0 0 2px rgba(96, 110, 255, 0.95), 0 14px 36px rgba(7, 11, 20, 0.35);
 }
 
 .tutorial__tooltip {
@@ -53,44 +52,10 @@
   white-space: pre-line;
 }
 
-.tutorial__actions {
-  margin-top: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-}
-
-.tutorial__right-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.tutorial__primary,
-.tutorial__ghost {
-  border-radius: 10px;
-  padding: 8px 12px;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.tutorial__primary {
-  border: none;
-  color: #ffffff;
-  background: linear-gradient(90deg, #3e4cff 0%, #6773ff 100%);
-}
-
-.tutorial__ghost {
-  border: 1px solid rgba(255, 255, 255, 0.24);
-  color: rgba(255, 255, 255, 0.9);
-  background: transparent;
-}
-
-.tutorial__ghost:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
+.tutorial__hint {
+  margin-top: 8px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.64);
 }
 
 .onboarding__overlay {

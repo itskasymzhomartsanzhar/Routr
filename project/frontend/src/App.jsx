@@ -185,7 +185,7 @@ function App() {
     }
   }, [isTutorialActive, tutorialStep, tutorialStepIndex])
 
-  const handleCloseTutorial = () => {
+  const handleFinishTutorial = () => {
     setIsTutorialActive(false)
     setTutorialStepIndex(0)
     setTutorialTargetRect(null)
@@ -193,14 +193,10 @@ function App() {
 
   const handleNextTutorial = () => {
     if (tutorialStepIndex >= tutorialSteps.length - 1) {
-      handleCloseTutorial()
+      handleFinishTutorial()
       return
     }
     setTutorialStepIndex((prev) => prev + 1)
-  }
-
-  const handlePrevTutorial = () => {
-    setTutorialStepIndex((prev) => Math.max(prev - 1, 0))
   }
 
   if (authLoading || appDataLoading) {
@@ -255,29 +251,12 @@ function App() {
         </div>
       )}
       {isTutorialActive && tutorialStep && (
-        <div className="tutorial">
+        <div className="tutorial" onClick={handleNextTutorial}>
           <div className="tutorial__overlay"></div>
           <div className="tutorial__tooltip" style={getTooltipStyle()}>
             <div className="tutorial__title">{tutorialStep.title}</div>
             <div className="tutorial__text">{tutorialStep.text}</div>
-            <div className="tutorial__actions">
-              <button type="button" className="tutorial__ghost" onClick={handleCloseTutorial}>
-                Пропустить
-              </button>
-              <div className="tutorial__right-actions">
-                <button
-                  type="button"
-                  className="tutorial__ghost"
-                  onClick={handlePrevTutorial}
-                  disabled={tutorialStepIndex === 0}
-                >
-                  Назад
-                </button>
-                <button type="button" className="tutorial__primary" onClick={handleNextTutorial}>
-                  {tutorialStepIndex === tutorialSteps.length - 1 ? 'Завершить' : 'Далее'}
-                </button>
-              </div>
-            </div>
+            <div className="tutorial__hint">Нажмите в любом месте, чтобы продолжить</div>
           </div>
         </div>
       )}
