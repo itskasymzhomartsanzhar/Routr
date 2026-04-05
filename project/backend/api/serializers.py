@@ -7,6 +7,7 @@ from .models import Product, User, Habit, HabitCompletion, Category, Title, Ques
 
 class TelegramAuthSerializer(serializers.Serializer):
     init_data = serializers.CharField()
+    timezone_name = serializers.CharField(required=False, allow_blank=True, max_length=64)
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -21,6 +22,7 @@ class UserSerializer(serializers.ModelSerializer):
             "username",
             "first_name",
             "photo_url",
+            "timezone_name",
             "premium_expiration",
             "is_premium",
             "title",
@@ -41,6 +43,7 @@ class UserSerializer(serializers.ModelSerializer):
         )
         read_only_fields = (
             "telegram_id",
+            "timezone_name",
             "premium_expiration",
             "level",
             "xp",

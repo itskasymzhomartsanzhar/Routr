@@ -10,6 +10,7 @@ from datetime import date, datetime, time, timedelta, timezone as dt_timezone
 from decimal import Decimal, InvalidOperation
 from difflib import SequenceMatcher
 from urllib.parse import parse_qsl, unquote, parse_qs
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from django.conf import settings
 from django.core.cache import cache
@@ -61,6 +62,35 @@ from .robokassa import (
 )
 
 logger = logging.getLogger(__name__)
+
+MAX_TIMEZONE_NAME_LENGTH = 64
+
+
+def _normalize_timezone_name(value: str | None) -> str | None:
+    if not isinstance(value, str):
+        return None
+    candidate = value.strip()
+    if not candidate or len(candidate) > MAX_TIMEZONE_NAME_LENGTH:
+        return None
+    try:
+        ZoneInfo(candidate)
+    except ZoneInfoNotFoundError:
+        return None
+    return candidate
+
+
+def _sync_user_timezone(user: User, timezone_name: str | None) -> None:
+    if not timezone_name:
+        return
+    if user.timezone_name == timezone_name:
+        return
+    user.timezone_name = timezone_name
+    user.save(update_fields=["timezone_name"])
+
+
+def _timezone_from_request_header(request) -> str | None:
+    header_value = request.headers.get("X-Timezone")
+    return _normalize_timezone_name(header_value)
 
 class AuthError(Exception):
     def __init__(self, message, detail, status_code):
@@ -1208,6 +1238,7 @@ def telegram_auth(request):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     init_data = serializer.validated_data['init_data']
+    client_timezone_name = _normalize_timezone_name(serializer.validated_data.get("timezone_name"))
     if not settings.BOT_TOKEN and settings.DEBUG:
         try:
             decoded_init_data = unquote(init_data)
@@ -1226,13 +1257,20 @@ def telegram_auth(request):
                     'detail': 'Invalid Telegram user id',
                 }, status=status.HTTP_400_BAD_REQUEST)
 
+            extra_fields = {
+                "first_name": user_data.get('first_name', ''),
+                "username": user_data.get('username', ''),
+                "photo_url": user_data.get('photo_url', ''),
+                "is_active": True,
+            }
+            if client_timezone_name:
+                extra_fields["timezone_name"] = client_timezone_name
+
             user, created = User.objects.get_or_create_telegram_user(
                 telegram_id=telegram_id,
-                first_name=user_data.get('first_name', ''),
-                username=user_data.get('username', ''),
-                photo_url=user_data.get('photo_url', ''),
-                is_active=True
+                **extra_fields,
             )
+            _sync_user_timezone(user, client_timezone_name)
             _sync_user_title(user, save=True)
 
             refresh = RefreshToken.for_user(user)
@@ -1264,13 +1302,20 @@ def telegram_auth(request):
         init_data_decoded = unquote(init_data)
         user_data = auth_handler.get_user_data(init_data_decoded)
 
+        extra_fields = {
+            "first_name": user_data.get('first_name', ''),
+            "username": user_data.get('username', ''),
+            "photo_url": user_data.get('avatar_url', ''),
+            "is_active": True,
+        }
+        if client_timezone_name:
+            extra_fields["timezone_name"] = client_timezone_name
+
         user, created = User.objects.get_or_create_telegram_user(
             telegram_id=user_data['tg_id'],
-            first_name=user_data.get('first_name', ''),
-            username=user_data.get('username', ''),
-            photo_url=user_data.get('avatar_url', ''),
-            is_active=True
+            **extra_fields,
         )
+        _sync_user_timezone(user, client_timezone_name)
         _sync_user_title(user, save=True)
 
         refresh = RefreshToken.for_user(user)
@@ -1299,6 +1344,7 @@ def telegram_auth(request):
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def get_current_user(request):
+    _sync_user_timezone(request.user, _timezone_from_request_header(request))
     _sync_user_title(request.user, save=True)
     return Response(_serialize_user_with_live_xp(request.user))
 
@@ -1307,6 +1353,7 @@ def get_current_user(request):
 @permission_classes([IsAuthenticated])
 def update_current_user(request):
     user = request.user
+    _sync_user_timezone(user, _timezone_from_request_header(request))
     serializer = UserSerializer(user, data=request.data, partial=True)
 
     if serializer.is_valid():
@@ -1669,6 +1716,7 @@ def get_my_purchases(request):
 @permission_classes([IsAuthenticated])
 def app_bootstrap(request):
     user = request.user
+    _sync_user_timezone(user, _timezone_from_request_header(request))
     today = timezone.localdate()
     _archive_expired_habits(user, today)
     _rollup_user_habit_stats(user, today)

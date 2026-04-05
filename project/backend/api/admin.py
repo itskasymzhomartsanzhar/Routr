@@ -34,6 +34,7 @@ class UserAdmin(admin.ModelAdmin):
         'get_full_name',
         'telegram_id',
         'username',
+        'timezone_name',
         'current_title',
         'level',
         'xp',
@@ -51,7 +52,7 @@ class UserAdmin(admin.ModelAdmin):
 
     fieldsets = (
         ('Основная информация', {
-            'fields': ('telegram_id', 'username', 'first_name')
+            'fields': ('telegram_id', 'username', 'first_name', 'timezone_name')
         }),
         ('Дополнительно', {
             'fields': ('photo_url', 'premium_expiration')

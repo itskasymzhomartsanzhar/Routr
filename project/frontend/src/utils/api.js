@@ -12,6 +12,7 @@ const MOCK_USER = {
   first_name: "Dev",
   last_name: "User",
   photo_url: "https://via.placeholder.com/150",
+  timezone_name: "UTC",
   is_premium: true,
 };
 
@@ -33,6 +34,14 @@ const setTokens = (access, refresh) => {
   if (refresh) localStorage.setItem("refresh_token", refresh);
 };
 
+const getClientTimezone = () => {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || "";
+  } catch (_error) {
+    return "";
+  }
+};
+
 const clearTokens = () => {
   localStorage.removeItem("access_token");
   localStorage.removeItem("refresh_token");
@@ -41,6 +50,10 @@ const clearTokens = () => {
 client.interceptors.request.use((config) => {
   const token = localStorage.getItem("access_token");
   if (token) config.headers.Authorization = `Bearer ${token}`;
+  const timezoneName = getClientTimezone();
+  if (timezoneName) {
+    config.headers["X-Timezone"] = timezoneName;
+  }
   return config;
 });
 
@@ -108,9 +121,13 @@ client.interceptors.response.use(
 export const auth = {
   telegram: async (initData) => {
     const isLocalDev = import.meta.env.DEV === true;
+    const timezoneName = getClientTimezone();
+    const payload = timezoneName
+      ? { init_data: initData, timezone_name: timezoneName }
+      : { init_data: initData };
     if (DEV_MODE) {
       try {
-        const { data } = await client.post(ENDPOINTS.auth.telegram, { init_data: initData });
+        const { data } = await client.post(ENDPOINTS.auth.telegram, payload);
         setTokens(data.access_token, data.refresh_token);
         return data;
       } catch (error) {
@@ -124,7 +141,7 @@ export const auth = {
       }
     }
     try {
-      const { data } = await client.post(ENDPOINTS.auth.telegram, { init_data: initData });
+      const { data } = await client.post(ENDPOINTS.auth.telegram, payload);
       setTokens(data.access_token, data.refresh_token);
       return data;
     } catch (error) {

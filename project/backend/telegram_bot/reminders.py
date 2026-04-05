@@ -1,12 +1,14 @@
 import asyncio
 import logging
 import time
-from datetime import timedelta
+from datetime import timedelta, timezone as dt_timezone
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from asgiref.sync import sync_to_async
 from aiogram.exceptions import TelegramRetryAfter
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from django.core.cache import cache
+from django.conf import settings
 from django.utils import timezone
 from django_redis import get_redis_connection
 
@@ -29,6 +31,7 @@ INDEX_VERSION_KEY = "tg:reminder:index:version"
 INDEX_REBUILD_TS_KEY = "tg:reminder:index:rebuilt_at"
 INDEX_LOCK_KEY = "tg:reminder:index:rebuild_lock"
 INDEX_KEY_PREFIX = "tg:reminder:index"
+INDEX_TIMEZONES_KEY_SUFFIX = ":tzs"
 INDEX_REBUILD_INTERVAL_SECONDS = 300
 INDEX_VERSION_TTL_SECONDS = 7200
 SEND_CONCURRENCY = 30
@@ -75,6 +78,28 @@ def _collect_unique_hhmm(reminder_times) -> set[str]:
     return result
 
 
+def _normalize_timezone_name(value: str | None) -> str:
+    fallback = settings.TIME_ZONE or "UTC"
+    if isinstance(value, str):
+        candidate = value.strip()
+        if candidate:
+            try:
+                ZoneInfo(candidate)
+                return candidate
+            except ZoneInfoNotFoundError:
+                pass
+    try:
+        ZoneInfo(fallback)
+        return fallback
+    except ZoneInfoNotFoundError:
+        return "UTC"
+
+
+def _habit_timezone_name(habit) -> str:
+    owner_tz = getattr(habit.owner, "timezone_name", "")
+    return _normalize_timezone_name(owner_tz)
+
+
 def _is_scheduled_for_today(repeat_days, today_weekday_ru: str) -> bool:
     if not isinstance(repeat_days, list) or not repeat_days:
         return True
@@ -85,10 +110,9 @@ def _dedupe_key(habit_id: int, now_hhmm: str, today_iso: str) -> str:
     return f"tg:reminder:habit:{habit_id}:{today_iso}:{now_hhmm}"
 
 
-def _seconds_to_day_end() -> int:
-    now = timezone.now()
-    tomorrow = (now + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
-    ttl = int((tomorrow - now).total_seconds()) + 3600
+def _seconds_to_day_end(now_local) -> int:
+    tomorrow = (now_local + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+    ttl = int((tomorrow - now_local).total_seconds()) + 3600
     return max(ttl, 3600)
 
 
@@ -136,19 +160,32 @@ def _rebuild_index_sync() -> bool:
         owner__is_active=True,
         owner__notification_habit=True,
         owner__telegram_id__isnull=False,
-    ).only("id", "reminder_times")
+    ).select_related("owner").only("id", "reminder_times", "owner__timezone_name")
+
+    touched_keys: set[str] = set()
+    timezone_set_key = f"{INDEX_KEY_PREFIX}:{version}{INDEX_TIMEZONES_KEY_SUFFIX}"
 
     for habit in queryset.iterator(chunk_size=3000):
+        timezone_name = _habit_timezone_name(habit)
+        pipe.sadd(timezone_set_key, timezone_name)
+        op_count += 1
         for hhmm in _collect_unique_hhmm(habit.reminder_times):
-            pipe.sadd(f"{INDEX_KEY_PREFIX}:{version}:m:{hhmm}", int(habit.id))
+            index_key = f"{INDEX_KEY_PREFIX}:{version}:tz:{timezone_name}:m:{hhmm}"
+            pipe.sadd(index_key, int(habit.id))
+            touched_keys.add(index_key)
             op_count += 1
             if op_count >= 10000:
                 pipe.execute()
                 op_count = 0
 
-    for i in range(24):
-        for j in range(60):
-            pipe.expire(f"{INDEX_KEY_PREFIX}:{version}:m:{i:02d}:{j:02d}", INDEX_VERSION_TTL_SECONDS)
+    pipe.expire(timezone_set_key, INDEX_VERSION_TTL_SECONDS)
+    op_count += 1
+    for key in touched_keys:
+        pipe.expire(key, INDEX_VERSION_TTL_SECONDS)
+        op_count += 1
+        if op_count >= 10000:
+            pipe.execute()
+            op_count = 0
     pipe.set(INDEX_VERSION_KEY, version, ex=INDEX_VERSION_TTL_SECONDS)
     pipe.set(INDEX_REBUILD_TS_KEY, str(int(time.time())), ex=INDEX_VERSION_TTL_SECONDS)
     pipe.execute()
@@ -179,7 +216,7 @@ def _ensure_index_sync(force: bool = False) -> None:
         _rebuild_index_sync()
 
 
-def _get_due_habit_ids_from_index_sync(now_hhmm: str) -> list[int]:
+def _get_due_habit_ids_from_index_sync(now_utc) -> list[int]:
     redis = _get_redis()
     if redis is None:
         return []
@@ -190,16 +227,39 @@ def _get_due_habit_ids_from_index_sync(now_hhmm: str) -> list[int]:
     if isinstance(version, bytes):
         version = version.decode("utf-8")
 
-    raw_ids = redis.smembers(f"{INDEX_KEY_PREFIX}:{version}:m:{now_hhmm}") or []
-    if not raw_ids:
+    timezone_key = f"{INDEX_KEY_PREFIX}:{version}{INDEX_TIMEZONES_KEY_SUFFIX}"
+    raw_timezones = redis.smembers(timezone_key) or []
+    if not raw_timezones:
         return []
 
+    timezone_names_set: set[str] = set()
+    for raw_tz in raw_timezones:
+        if isinstance(raw_tz, bytes):
+            raw_tz = raw_tz.decode("utf-8")
+        timezone_names_set.add(_normalize_timezone_name(raw_tz))
+    timezone_names = list(timezone_names_set)
+    if not timezone_names:
+        return []
+
+    pipe = redis.pipeline(transaction=False)
+    for timezone_name in timezone_names:
+        local_now = now_utc.astimezone(ZoneInfo(timezone_name))
+        local_hhmm = local_now.strftime("%H:%M")
+        pipe.smembers(f"{INDEX_KEY_PREFIX}:{version}:tz:{timezone_name}:m:{local_hhmm}")
+    raw_lists = pipe.execute()
+
     result: list[int] = []
-    for raw in raw_ids:
-        try:
-            result.append(int(raw))
-        except Exception:
-            continue
+    seen: set[int] = set()
+    for raw_ids in raw_lists:
+        for raw in raw_ids or []:
+            try:
+                value = int(raw)
+            except Exception:
+                continue
+            if value in seen:
+                continue
+            seen.add(value)
+            result.append(value)
     return result
 
 
@@ -207,8 +267,8 @@ async def _ensure_index(force: bool = False) -> None:
     await sync_to_async(_ensure_index_sync, thread_sensitive=False)(force)
 
 
-async def _get_due_habit_ids_from_index(now_hhmm: str) -> list[int]:
-    return await sync_to_async(_get_due_habit_ids_from_index_sync, thread_sensitive=False)(now_hhmm)
+async def _get_due_habit_ids_from_index(now_utc) -> list[int]:
+    return await sync_to_async(_get_due_habit_ids_from_index_sync, thread_sensitive=False)(now_utc)
 
 
 async def _fetch_candidate_habits_fallback():
@@ -225,6 +285,7 @@ async def _fetch_candidate_habits_fallback():
         "repeat_days",
         "reminder_times",
         "owner_id",
+        "owner__timezone_name",
         "owner__telegram_id",
     )
     return await sync_to_async(lambda: list(queryset.iterator(chunk_size=2000)))()
@@ -247,28 +308,33 @@ async def _fetch_habits_by_ids(habit_ids: list[int]):
         "repeat_days",
         "reminder_times",
         "owner_id",
+        "owner__timezone_name",
         "owner__telegram_id",
     )
     return await sync_to_async(lambda: list(queryset.iterator(chunk_size=2000)))()
 
 
-async def _fetch_today_completion_map(habit_ids: list[int]):
+async def _fetch_completion_map(habit_ids: list[int], now_utc):
     if not habit_ids:
         return {}
-    today = timezone.localdate()
-    rows = HabitCompletion.objects.filter(habit_id__in=habit_ids, date=today).values_list("habit_id", "count")
-    pairs = await sync_to_async(list)(rows)
-    return {int(hid): int(cnt or 0) for hid, cnt in pairs}
+    utc_date = now_utc.date()
+    min_date = utc_date - timedelta(days=1)
+    max_date = utc_date + timedelta(days=1)
+    rows = HabitCompletion.objects.filter(
+        habit_id__in=habit_ids,
+        date__range=(min_date, max_date),
+    ).values_list("habit_id", "date", "count")
+    triples = await sync_to_async(list)(rows)
+    return {
+        (int(hid), day.isoformat()): int(cnt or 0)
+        for hid, day, cnt in triples
+    }
 
 
 async def process_due_reminders(bot) -> int:
-    now = timezone.localtime()
-    now_hhmm = now.strftime("%H:%M")
-    today_weekday_ru = WEEKDAY_NAMES_RU[now.weekday()]
-    today_iso = now.date().isoformat()
-    ttl = _seconds_to_day_end()
+    now_utc = timezone.now().astimezone(dt_timezone.utc)
 
-    habit_ids = await _get_due_habit_ids_from_index(now_hhmm)
+    habit_ids = await _get_due_habit_ids_from_index(now_utc)
     if habit_ids:
         habits = await _fetch_habits_by_ids(habit_ids)
     else:
@@ -276,26 +342,42 @@ async def process_due_reminders(bot) -> int:
     if not habits:
         return 0
 
-    due_habits = [
-        habit
-        for habit in habits
-        if _is_due_time(habit.reminder_times, now_hhmm)
-        and _is_scheduled_for_today(habit.repeat_days, today_weekday_ru)
-    ]
+    habit_context: dict[int, dict] = {}
+    due_habits = []
+    for habit in habits:
+        timezone_name = _habit_timezone_name(habit)
+        local_now = now_utc.astimezone(ZoneInfo(timezone_name))
+        local_hhmm = local_now.strftime("%H:%M")
+        local_weekday = WEEKDAY_NAMES_RU[local_now.weekday()]
+        local_today_iso = local_now.date().isoformat()
+        if not _is_due_time(habit.reminder_times, local_hhmm):
+            continue
+        if not _is_scheduled_for_today(habit.repeat_days, local_weekday):
+            continue
+        habit_context[habit.id] = {
+            "local_hhmm": local_hhmm,
+            "local_today_iso": local_today_iso,
+            "ttl": _seconds_to_day_end(local_now),
+        }
+        due_habits.append(habit)
     if not due_habits:
         return 0
 
-    completion_map = await _fetch_today_completion_map([habit.id for habit in due_habits])
+    completion_map = await _fetch_completion_map([habit.id for habit in due_habits], now_utc)
     keyboard = _build_reminder_keyboard()
     semaphore = asyncio.Semaphore(SEND_CONCURRENCY)
     sent = 0
 
     async def _send_one(habit):
         nonlocal sent
-        if completion_map.get(habit.id, 0) >= max(int(habit.goal or 1), 1):
+        context = habit_context.get(habit.id)
+        if not context:
             return
-        key = _dedupe_key(habit.id, now_hhmm, today_iso)
-        if not cache.add(key, 1, timeout=ttl):
+        completion_key = (habit.id, context["local_today_iso"])
+        if completion_map.get(completion_key, 0) >= max(int(habit.goal or 1), 1):
+            return
+        key = _dedupe_key(habit.id, context["local_hhmm"], context["local_today_iso"])
+        if not cache.add(key, 1, timeout=context["ttl"]):
             return
 
         async with semaphore:
@@ -343,8 +425,8 @@ async def run_reminder_loop(bot, poll_interval_seconds: int = 30) -> None:
     last_processed_minute: str | None = None
     while True:
         try:
-            now = timezone.localtime()
-            minute_key = now.strftime("%Y-%m-%d %H:%M")
+            now_utc = timezone.now().astimezone(dt_timezone.utc)
+            minute_key = now_utc.strftime("%Y-%m-%d %H:%M")
             if minute_key != last_processed_minute:
                 await _ensure_index(force=False)
                 count = await process_due_reminders(bot)

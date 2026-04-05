@@ -374,7 +374,10 @@ const Profile = () => {
   }
 
   const handleOpenOnboarding = () => {
-    window.dispatchEvent(new Event('routr:open-onboarding'))
+    handleCloseSettings()
+    window.setTimeout(() => {
+      window.dispatchEvent(new Event('routr:open-onboarding'))
+    }, 320)
   }
 
   const handleOpenSupport = (event) => {
@@ -684,7 +687,7 @@ const Profile = () => {
                         <path d="M12 15.2C11.49 15.2 11.07 15.6 11.07 16.1C11.07 16.6 11.49 17 12 17C12.51 17 12.93 16.6 12.93 16.1C12.93 15.6 12.51 15.2 12 15.2Z" fill="#040415"/>
                       </svg>
                     </span>
-                    <span className="profile__settings-text">Инструкция</span>
+                    <span className="profile__settings-text">Запустить инструкцию</span>
                     <span className="profile__settings-arrow">
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
                         <path d="M9 6L15 12L9 18" stroke="#8B93A7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>

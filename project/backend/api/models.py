@@ -51,6 +51,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     photo_url = models.URLField("URL фото", max_length=750, blank=True, null=True)
     first_name = models.CharField("Имя", max_length=250, blank=True, null=True)
     language_code = models.CharField("Код языка", max_length=8, default="ru", blank=True)
+    timezone_name = models.CharField("Часовой пояс", max_length=64, blank=True, default="")
 
     premium_expiration = models.DateTimeField("Дата окончания премиума", null=True, blank=True)
 
