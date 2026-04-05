@@ -28,7 +28,7 @@ SECRET_KEY = os.getenv(
     "django-insecure-*jn%m8q%f)u&y!8hd16@%l$cjww9y2yko#o1=3bmai5%cpqpu*",
 )
 
-DEBUG = True
+DEBUG = env_bool("DJANGO_DEBUG", False)
 
 ALLOWED_HOSTS = ["127.0.0.1", "localhost", "routr.swifttest.ru", '85.239.51.119']
 CSRF_TRUSTED_ORIGINS = env_list(
