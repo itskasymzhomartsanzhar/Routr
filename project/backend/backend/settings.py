@@ -30,7 +30,7 @@ SECRET_KEY = os.getenv(
 
 DEBUG = True
 
-ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", ["127.0.0.1", "localhost", "routr.swifttest.ru"])
+ALLOWED_HOSTS = ["127.0.0.1", "localhost", "routr.swifttest.ru", '85.239.51.119']
 CSRF_TRUSTED_ORIGINS = env_list(
     "DJANGO_CSRF_TRUSTED_ORIGINS",
     ["http://127.0.0.1:8000", "https://routr.swifttest.ru", "http://routr.swifttest.ru"],
