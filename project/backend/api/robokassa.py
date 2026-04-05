@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 ROBOKASSA_MERCHANT_LOGIN = "Routr"
 ROBOKASSA_PASSWORD1 = "pCXNSJ44BX6UdOUk65Xj"
 ROBOKASSA_PASSWORD2 = "TFA05xA1thUG9mCEw3xd"
-ROBOKASSA_IS_TEST = True
+ROBOKASSA_IS_TEST = False
 ROBOKASSA_API_BASE = "https://auth.robokassa.ru/Merchant/InvoiceServiceWebApi"
 ROBOKASSA_RETURN_BOT_URL = "https://t.me/Routr_bot"
 ROBOKASSA_WEBHOOK_BASE_URL = os.getenv("WEBAPP_URL", "").strip()
@@ -59,7 +59,7 @@ def _build_robokassa_client():
         merchant_login="Routr",
         password1="pCXNSJ44BX6UdOUk65Xj",
         password2="TFA05xA1thUG9mCEw3xd",
-        is_test=True,
+        is_test=False,
         algorithm=HashAlgorithm.md5,
     )
 
