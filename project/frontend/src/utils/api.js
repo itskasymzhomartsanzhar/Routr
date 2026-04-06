@@ -1,8 +1,27 @@
 import axios from "axios";
 import ENDPOINTS from "./endpoints";
 
-const RAW_API_BASE_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000/v1/";
-const API_BASE_URL = RAW_API_BASE_URL.replace(/\/+$/, "");
+const normalizeApiBaseUrl = (rawValue) => {
+  const raw = String(rawValue || "").trim();
+  const fallback = "/v1";
+  const candidate = raw || fallback;
+  try {
+    const resolved = new URL(candidate, window.location.origin);
+    const host = (resolved.hostname || "").toLowerCase();
+    const isLocalHost = host === "localhost" || host === "127.0.0.1";
+    if (!isLocalHost && resolved.protocol === "http:") {
+      resolved.protocol = "https:";
+    }
+    return resolved.origin === window.location.origin
+      ? `${resolved.pathname}`.replace(/\/+$/, "") || "/"
+      : resolved.toString().replace(/\/+$/, "");
+  } catch {
+    return candidate.replace(/\/+$/, "") || fallback;
+  }
+};
+
+const RAW_API_BASE_URL = import.meta.env.VITE_API_URL || "/v1/";
+const API_BASE_URL = normalizeApiBaseUrl(RAW_API_BASE_URL);
 
 const DEV_MODE = import.meta.env.VITE_DEV_MODE === "true";
 const MOCK_USER = {
