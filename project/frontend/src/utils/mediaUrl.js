@@ -5,7 +5,9 @@ export const normalizeMediaUrl = (rawUrl) => {
 
   try {
     const resolved = new URL(value, window.location.origin)
-    if (window.location.protocol === 'https:' && resolved.protocol === 'http:') {
+    const host = (resolved.hostname || '').toLowerCase()
+    const isLocalHost = host === 'localhost' || host === '127.0.0.1'
+    if (!isLocalHost && resolved.protocol === 'http:') {
       resolved.protocol = 'https:'
     }
     return resolved.toString()
@@ -13,4 +15,3 @@ export const normalizeMediaUrl = (rawUrl) => {
     return value
   }
 }
-

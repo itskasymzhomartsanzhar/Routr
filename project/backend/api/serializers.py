@@ -2,6 +2,7 @@ from rest_framework import serializers
 
 from django.utils import timezone
 from datetime import date
+from urllib.parse import urlsplit, urlunsplit
 from .models import Product, User, Habit, HabitCompletion, Category, Title, Quest, Payment
 
 
@@ -88,7 +89,16 @@ class ProductSerializer(serializers.ModelSerializer):
         if not obj.image:
             return None
         try:
-            return obj.image.url
+            request = self.context.get("request")
+            url = obj.image.url
+            if request is not None:
+                url = request.build_absolute_uri(url)
+            parsed = urlsplit(url)
+            hostname = (parsed.hostname or "").lower()
+            if parsed.scheme == "http" and hostname not in {"localhost", "127.0.0.1"}:
+                parsed = parsed._replace(scheme="https")
+                return urlunsplit(parsed)
+            return url
         except Exception:
             return None
 
