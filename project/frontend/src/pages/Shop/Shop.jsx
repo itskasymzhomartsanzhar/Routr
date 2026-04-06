@@ -4,6 +4,7 @@ import BottomNav from '../../components/organisms/Menu/Menu.jsx'
 import placeholderImage from '../../assets/placeholder.png'
 import ENDPOINTS from '../../utils/endpoints'
 import { request } from '../../utils/api'
+import { normalizeMediaUrl } from '../../utils/mediaUrl'
 import { useAppData } from '../../contexts/AppDataContext.jsx'
 import './Shop.scss'
 
@@ -125,7 +126,7 @@ const Shop = () => {
               className="shop__card"
             >
               <div className="shop__card-icon">
-                <img src={product.image || placeholderImage} alt={product.name} />
+                <img src={normalizeMediaUrl(product.image) || placeholderImage} alt={product.name} />
               </div>
               <div className="shop__card-title" style={{ whiteSpace: 'pre-line' }}>
                 {formatText(product.name)}

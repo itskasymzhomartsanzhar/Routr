@@ -1,13 +1,9 @@
+import { normalizeMediaUrl } from './mediaUrl'
+
 const seen = new Set()
 
 const toAbsoluteUrl = (url) => {
-  if (!url) return null
-  if (/^https?:\/\//i.test(url)) return url
-  try {
-    return new URL(url, window.location.origin).toString()
-  } catch {
-    return null
-  }
+  return normalizeMediaUrl(url)
 }
 
 const preloadOne = (url) =>
@@ -57,4 +53,3 @@ export const preloadProductImagesInBackground = (products) => {
     run()
   }, 0)
 }
-
