@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import placeholderImage from '../../assets/placeholder.png'
 import ENDPOINTS from '../../utils/endpoints'
 import { request } from '../../utils/api'
+import { normalizeMediaUrl } from '../../utils/mediaUrl'
 import './Purchases.scss'
 
 const Purchases = () => {
@@ -64,7 +65,7 @@ const Purchases = () => {
             title: formatText(product?.name || 'Покупка'),
             subtitle: formatText(product?.description || ''),
             date: formatDate(item?.purchased_at || item?.paid_at || item?.created_at),
-            image: product?.image || placeholderImage,
+            image: normalizeMediaUrl(product?.image) || placeholderImage,
             status: item?.status || 'paid',
           }
         }),

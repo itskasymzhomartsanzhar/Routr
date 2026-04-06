@@ -2,6 +2,11 @@ export const normalizeMediaUrl = (rawUrl) => {
   if (!rawUrl) return null
   const value = String(rawUrl).trim()
   if (!value) return null
+  const enforceHttps = (url) => {
+    if (!url) return url
+    if (/^http:\/\/(localhost|127\.0\.0\.1)(?::\d+)?\//i.test(url)) return url
+    return url.replace(/^http:\/\//i, 'https://')
+  }
 
   try {
     const resolved = new URL(value, window.location.origin)
@@ -10,8 +15,8 @@ export const normalizeMediaUrl = (rawUrl) => {
     if (!isLocalHost && resolved.protocol === 'http:') {
       resolved.protocol = 'https:'
     }
-    return resolved.toString()
+    return enforceHttps(resolved.toString())
   } catch {
-    return value
+    return enforceHttps(value)
   }
 }
