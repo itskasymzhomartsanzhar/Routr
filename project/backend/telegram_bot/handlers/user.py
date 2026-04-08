@@ -20,6 +20,15 @@ logger = logging.getLogger(__name__)
 
 user_router = Router(name='user')
 OFFER_URL = "https://telegra.ph/PUBLICHNAYA-OFERTA-02-25-8"
+WELCOME_TEXT = (
+    "Добро пожаловать в Router\n\n"
+    "Мы создали пространство, где твои привычки превращаются в путь. Без давления и сложных схем.\n\n"
+    "Router помогает замечать маленькие шаги каждый день и видеть, как из них складывается большое движение. "
+    "Здесь можно отслеживать здоровье, обучение, личные цели - всё, что делает твою жизнь осознаннее.\n\n"
+    "Это не просто трекер. Это твой тихий навигатор в мире ежедневных ритуалов. "
+    "Веди привычки приватно или открывай их для сообщества, получай опыт, открывай новые уровни и наблюдай, "
+    "как растёт твоё «Колесо баланса»."
+)
 
 
 def _extract_profile_id(payload: str) -> int | None:
@@ -215,14 +224,9 @@ async def _send_payment_message(message: Message, user: User, product: Product):
     )
 
 
-async def _send_default_webapp(message: Message, user: User, *, created: bool):
+async def _send_default_webapp(message: Message):
     keyboard = Keyboards.webapp_button('ru')
-    text = (
-        f"🎉 Добро пожаловать в Routr, {user.first_name}!\n\nНажмите кнопку ниже, чтобы открыть приложение:"
-        if created
-        else f"👋 С возвращением, {user.first_name}!\n\nНажмите кнопку ниже, чтобы открыть Routr:"
-    )
-    await message.answer(text, reply_markup=keyboard)
+    await message.answer(WELCOME_TEXT, reply_markup=keyboard)
 
 
 async def _send_profile_webapp(message: Message, profile_user_id: int):
@@ -343,7 +347,7 @@ async def start_command(message: Message, command: CommandObject):
                 return
             await _send_payment_message(message, user, product)
         else:
-            await _send_default_webapp(message, user, created=created)
+            await _send_default_webapp(message)
     except Exception as e:
         logger.error(f"Error in start_command: {e}")
         await message.answer("❌ Произошла ошибка. Попробуйте еще раз.")
