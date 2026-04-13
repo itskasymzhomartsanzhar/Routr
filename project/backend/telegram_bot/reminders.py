@@ -157,10 +157,11 @@ def _rebuild_index_sync() -> bool:
 
     queryset = Habit.objects.filter(
         reminder=True,
+        is_archived=False,
         owner__is_active=True,
         owner__notification_habit=True,
         owner__telegram_id__isnull=False,
-    ).select_related("owner").only("id", "reminder_times", "owner__timezone_name")
+    ).select_related("owner").only("id", "reminder_times", "end_date", "owner__timezone_name")
 
     touched_keys: set[str] = set()
     timezone_set_key = f"{INDEX_KEY_PREFIX}:{version}{INDEX_TIMEZONES_KEY_SUFFIX}"
@@ -274,6 +275,7 @@ async def _get_due_habit_ids_from_index(now_utc) -> list[int]:
 async def _fetch_candidate_habits_fallback():
     queryset = Habit.objects.filter(
         reminder=True,
+        is_archived=False,
         owner__is_active=True,
         owner__notification_habit=True,
         owner__telegram_id__isnull=False,
@@ -284,6 +286,7 @@ async def _fetch_candidate_habits_fallback():
         "goal",
         "repeat_days",
         "reminder_times",
+        "end_date",
         "owner_id",
         "owner__timezone_name",
         "owner__telegram_id",
@@ -297,6 +300,7 @@ async def _fetch_habits_by_ids(habit_ids: list[int]):
     queryset = Habit.objects.filter(
         id__in=habit_ids,
         reminder=True,
+        is_archived=False,
         owner__is_active=True,
         owner__notification_habit=True,
         owner__telegram_id__isnull=False,
@@ -307,6 +311,7 @@ async def _fetch_habits_by_ids(habit_ids: list[int]):
         "goal",
         "repeat_days",
         "reminder_times",
+        "end_date",
         "owner_id",
         "owner__timezone_name",
         "owner__telegram_id",
@@ -347,6 +352,8 @@ async def process_due_reminders(bot) -> int:
     for habit in habits:
         timezone_name = _habit_timezone_name(habit)
         local_now = now_utc.astimezone(ZoneInfo(timezone_name))
+        if habit.end_date and local_now.date() > habit.end_date:
+            continue
         local_hhmm = local_now.strftime("%H:%M")
         local_weekday = WEEKDAY_NAMES_RU[local_now.weekday()]
         local_today_iso = local_now.date().isoformat()

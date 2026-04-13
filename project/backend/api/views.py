@@ -633,6 +633,14 @@ def _cache_set_safe(key: str, value, timeout: int) -> None:
         return
 
 
+def _invalidate_reminder_index() -> None:
+    try:
+        redis = get_redis_connection("default")
+        redis.delete("tg:reminder:index:version", "tg:reminder:index:rebuilt_at")
+    except Exception:
+        return
+
+
 def _int_from_redis(value, default: int = 0) -> int:
     if value is None:
         return default
@@ -2309,6 +2317,7 @@ class HabitViewSet(viewsets.ModelViewSet):
             self._validate_habit_limits(user, target_visibility, is_new=True)
             habit = serializer.save(owner=user)
             _check_and_award_quests(user, timezone.localdate())
+            transaction.on_commit(_invalidate_reminder_index)
         return habit
 
     def perform_update(self, serializer):
@@ -2327,6 +2336,7 @@ class HabitViewSet(viewsets.ModelViewSet):
             habit = serializer.save()
             if next_goal != old_goal:
                 _rebuild_habit_stats(habit, timezone.localdate())
+            transaction.on_commit(_invalidate_reminder_index)
 
     def perform_destroy(self, instance):
         source_id = instance.source_habit_id
@@ -2341,6 +2351,7 @@ class HabitViewSet(viewsets.ModelViewSet):
             instance.delete()
             if source_id and deleted_copy_links:
                 Habit.objects.filter(pk=source_id, copied_count__gt=0).update(copied_count=F("copied_count") - 1)
+            transaction.on_commit(_invalidate_reminder_index)
 
     @action(detail=True, methods=["post"], url_path="complete")
     def complete(self, request, pk=None):
