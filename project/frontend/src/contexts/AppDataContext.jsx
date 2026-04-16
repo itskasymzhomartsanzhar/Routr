@@ -7,6 +7,20 @@ const AppDataContext = createContext(undefined)
 let bootstrapInFlightPromise = null
 let bootstrapInFlightToken = null
 
+const forceHttpsDeep = (value) => {
+  if (typeof value === 'string') {
+    if (/^http:\/\/(localhost|127\.0\.0\.1)(?::\d+)?\//i.test(value)) return value
+    return value.replace(/^http:\/\//i, 'https://')
+  }
+  if (Array.isArray(value)) return value.map((item) => forceHttpsDeep(item))
+  if (!value || typeof value !== 'object') return value
+  const output = {}
+  Object.entries(value).forEach(([key, item]) => {
+    output[key] = forceHttpsDeep(item)
+  })
+  return output
+}
+
 const EMPTY_BOOTSTRAP = {
   user: null,
   habits: [],
@@ -40,11 +54,12 @@ export const AppDataProvider = ({ children }) => {
         })
         data = await bootstrapInFlightPromise
       }
+      const securedData = forceHttpsDeep(data)
       setBootstrap({
         ...EMPTY_BOOTSTRAP,
-        ...data,
-        balance: data?.balance ?? EMPTY_BOOTSTRAP.balance,
-        leaderboard: data?.leaderboard ?? EMPTY_BOOTSTRAP.leaderboard
+        ...securedData,
+        balance: securedData?.balance ?? EMPTY_BOOTSTRAP.balance,
+        leaderboard: securedData?.leaderboard ?? EMPTY_BOOTSTRAP.leaderboard
       })
       setError(null)
     } catch (err) {
@@ -66,8 +81,8 @@ export const AppDataProvider = ({ children }) => {
 
   const setBootstrapData = useCallback((updater) => {
     setBootstrap((prev) => {
-      if (typeof updater === 'function') return updater(prev)
-      return { ...prev, ...updater }
+      const next = typeof updater === 'function' ? updater(prev) : { ...prev, ...updater }
+      return forceHttpsDeep(next)
     })
   }, [])
 

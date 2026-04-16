@@ -6,6 +6,12 @@ import { request } from '../../utils/api'
 import { normalizeMediaUrl } from '../../utils/mediaUrl'
 import './Purchases.scss'
 
+const forceHttps = (value) => {
+  const text = String(value || '')
+  if (/^http:\/\/(localhost|127\.0\.0\.1)(?::\d+)?\//i.test(text)) return text
+  return text.replace(/^http:\/\//i, 'https://')
+}
+
 const Purchases = () => {
   const navigate = useNavigate()
   const [items, setItems] = useState([])
@@ -65,7 +71,7 @@ const Purchases = () => {
             title: formatText(product?.name || 'Покупка'),
             subtitle: formatText(product?.description || ''),
             date: formatDate(item?.purchased_at || item?.paid_at || item?.created_at),
-            image: normalizeMediaUrl(product?.image) || placeholderImage,
+            image: forceHttps(normalizeMediaUrl(product?.image) || placeholderImage),
             status: item?.status || 'paid',
           }
         }),
