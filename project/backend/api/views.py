@@ -66,6 +66,19 @@ logger = logging.getLogger(__name__)
 MAX_TIMEZONE_NAME_LENGTH = 64
 
 
+def _force_https_deep(value):
+    if isinstance(value, str):
+        raw = value.strip()
+        if re.match(r"^http://(localhost|127\.0\.0\.1)(?::\d+)?/", raw, re.IGNORECASE):
+            return value
+        return re.sub(r"^http://", "https://", value, flags=re.IGNORECASE)
+    if isinstance(value, list):
+        return [_force_https_deep(item) for item in value]
+    if isinstance(value, dict):
+        return {key: _force_https_deep(item) for key, item in value.items()}
+    return value
+
+
 def _normalize_timezone_name(value: str | None) -> str | None:
     if not isinstance(value, str):
         return None
@@ -1717,7 +1730,7 @@ def get_my_purchases(request):
             payments = payments.filter(status=Payment.STATUS_PAID)
 
     serializer = PaymentSerializer(payments, many=True, context={"request": request})
-    return Response(serializer.data)
+    return Response(_force_https_deep(serializer.data))
 
 
 @api_view(["GET"])
@@ -1750,7 +1763,7 @@ def app_bootstrap(request):
         "balance": _serialize_balance(user),
         "leaderboard": _build_leaderboard_payload(user, range_key="month", limit=LEADERBOARD_DEFAULT_LIMIT),
     }
-    return Response(payload)
+    return Response(_force_https_deep(payload))
 
 
 class ProductViewSet(viewsets.ModelViewSet):
@@ -1761,7 +1774,7 @@ class ProductViewSet(viewsets.ModelViewSet):
     def available(self, request):
         queryset = self.get_queryset().filter(is_active=True)
         serializer = self.get_serializer(queryset, many=True)
-        return Response(serializer.data)
+        return Response(_force_https_deep(serializer.data))
 
 
 @api_view(["POST"])

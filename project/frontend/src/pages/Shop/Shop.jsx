@@ -9,7 +9,6 @@ import { useAppData } from '../../contexts/AppDataContext.jsx'
 import './Shop.scss'
 
 const forceHttps = (value) => {
-  console.log('forceHttps called with:', value)
   const text = String(value || '')
   if (/^http:\/\/(localhost|127\.0\.0\.1)(?::\d+)?\//i.test(text)) return text
   return text.replace(/^http:\/\//i, 'https://')
