@@ -12,15 +12,8 @@ const enforceHttpsUrl = (rawUrl) => {
   if (!rawUrl || typeof rawUrl !== 'string') return rawUrl;
   const trimmed = rawUrl.trim();
   if (!/^http:\/\//i.test(trimmed)) return rawUrl;
-  try {
-    const parsed = new URL(trimmed, window.location.origin);
-    const host = (parsed.hostname || '').toLowerCase();
-    if (host === 'localhost' || host === '127.0.0.1') return rawUrl;
-    parsed.protocol = 'https:';
-    return parsed.toString();
-  } catch {
-    return trimmed.replace(/^http:\/\//i, 'https://');
-  }
+  if (/^http:\/\/(localhost|127\.0\.0\.1)(?::\d+)?\//i.test(trimmed)) return rawUrl;
+  return trimmed.replace(/^http:\/\//i, 'https://');
 };
 
 const patchNodeAttributes = (node) => {
