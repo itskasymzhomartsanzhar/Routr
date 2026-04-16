@@ -179,7 +179,8 @@ USE_TZ = True
 
 
 
-MEDIA_URL = "/media/"
+MEDIA_PUBLIC_ORIGIN = "https://routr.swifttest.ru"
+MEDIA_URL = f"{MEDIA_PUBLIC_ORIGIN}/media/"
 MEDIA_ROOT = BASE_DIR / "media"
  
 STATIC_URL = '/static/'

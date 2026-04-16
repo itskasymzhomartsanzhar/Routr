@@ -1,6 +1,33 @@
 import axios from "axios";
 import ENDPOINTS from "./endpoints";
 
+const enforceHttpsUrl = (rawUrl) => {
+  if (!rawUrl) return rawUrl;
+  if (typeof rawUrl !== "string") return rawUrl;
+  const trimmed = rawUrl.trim();
+  if (!/^http:\/\//i.test(trimmed)) return rawUrl;
+  try {
+    const parsed = new URL(trimmed);
+    const host = (parsed.hostname || "").toLowerCase();
+    if (host === "localhost" || host === "127.0.0.1") return rawUrl;
+    parsed.protocol = "https:";
+    return parsed.toString();
+  } catch {
+    return trimmed.replace(/^http:\/\//i, "https://");
+  }
+};
+
+const enforceHttpsPayload = (value) => {
+  if (typeof value === "string") return enforceHttpsUrl(value);
+  if (Array.isArray(value)) return value.map((item) => enforceHttpsPayload(item));
+  if (!value || typeof value !== "object") return value;
+  const output = {};
+  Object.entries(value).forEach(([key, item]) => {
+    output[key] = enforceHttpsPayload(item);
+  });
+  return output;
+};
+
 const normalizeApiBaseUrl = (rawValue) => {
   const raw = String(rawValue || "").trim();
   const fallback = "/v1";
@@ -67,6 +94,12 @@ const clearTokens = () => {
 };
 
 client.interceptors.request.use((config) => {
+  if (config.baseURL) {
+    config.baseURL = enforceHttpsUrl(config.baseURL);
+  }
+  if (typeof config.url === "string") {
+    config.url = enforceHttpsUrl(config.url);
+  }
   const token = localStorage.getItem("access_token");
   if (token) config.headers.Authorization = `Bearer ${token}`;
   const timezoneName = getClientTimezone();
@@ -77,7 +110,10 @@ client.interceptors.request.use((config) => {
 });
 
 client.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    response.data = enforceHttpsPayload(response.data);
+    return response;
+  },
   async (error) => {
     const originalRequest = error.config;
 

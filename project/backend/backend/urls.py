@@ -10,5 +10,5 @@ urlpatterns = [
     path("v1/api/", include("api.urls")),
 ]
 
-if settings.DEBUG:
+if settings.DEBUG and str(settings.MEDIA_URL).startswith("/"):
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
