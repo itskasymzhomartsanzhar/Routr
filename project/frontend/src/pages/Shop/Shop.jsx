@@ -8,10 +8,23 @@ import { normalizeMediaUrl } from '../../utils/mediaUrl'
 import { useAppData } from '../../contexts/AppDataContext.jsx'
 import './Shop.scss'
 
-const forceHttps = (value) => {
-  const text = String(value || '')
+const normalizeProductImage = (value) => {
+  const normalized = normalizeMediaUrl(value)
+  const text = String(normalized || '').trim()
+  if (!text) return ''
   if (/^http:\/\/(localhost|127\.0\.0\.1)(?::\d+)?\//i.test(text)) return text
   return text.replace(/^http:\/\//i, 'https://')
+}
+
+const normalizeProducts = (items) =>
+  (Array.isArray(items) ? items : []).map((item) => ({
+    ...item,
+    image: normalizeProductImage(item?.image),
+  }))
+
+const withImageFallback = (value) => {
+  if (!value) return placeholderImage
+  return value
 }
 
 const Shop = () => {
@@ -32,13 +45,13 @@ const Shop = () => {
 
   useEffect(() => {
     if (Array.isArray(bootstrap?.products) && bootstrap.products.length) {
-      setProducts(bootstrap.products)
+      setProducts(normalizeProducts(bootstrap.products))
       return
     }
     const loadProducts = async () => {
       try {
         const data = await request.get(ENDPOINTS.products.available)
-        const items = Array.isArray(data) ? data : []
+        const items = normalizeProducts(data)
         setProducts(items)
         setBootstrapData((prev) => ({ ...prev, products: items }))
       } catch (error) {
@@ -132,7 +145,7 @@ const Shop = () => {
               className="shop__card"
             >
               <div className="shop__card-icon">
-                <img src={forceHttps(normalizeMediaUrl(product.image) || placeholderImage)} alt={product.name} />
+                <img src={withImageFallback(product.image)} alt={product.name} />
               </div>
               <div className="shop__card-title" style={{ whiteSpace: 'pre-line' }}>
                 {formatText(product.name)}
