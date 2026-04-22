@@ -1,5 +1,6 @@
 from rest_framework import serializers
 
+from django.conf import settings
 from django.utils import timezone
 from datetime import date
 from urllib.parse import urlsplit, urlunsplit
@@ -91,8 +92,12 @@ class ProductSerializer(serializers.ModelSerializer):
         try:
             request = self.context.get("request")
             url = obj.image.url
-            if request is not None:
+            if request is not None and str(url).startswith("/"):
                 url = request.build_absolute_uri(url)
+            if str(url).startswith("/"):
+                media_origin = str(getattr(settings, "MEDIA_PUBLIC_ORIGIN", "")).strip().rstrip("/")
+                if media_origin:
+                    url = f"{media_origin}{url}"
             parsed = urlsplit(url)
             hostname = (parsed.hostname or "").lower()
             if parsed.scheme == "http" and hostname not in {"localhost", "127.0.0.1"}:

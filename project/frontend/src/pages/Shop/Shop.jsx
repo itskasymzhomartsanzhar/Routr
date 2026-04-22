@@ -8,12 +8,17 @@ import { normalizeMediaUrl } from '../../utils/mediaUrl'
 import { useAppData } from '../../contexts/AppDataContext.jsx'
 import './Shop.scss'
 
-const normalizeProductImage = (value) => {
-  const normalized = normalizeMediaUrl(value)
-  const text = String(normalized || '').trim()
+const forceHttps = (value) => {
+  const text = String(value || '').trim()
   if (!text) return ''
   if (/^http:\/\/(localhost|127\.0\.0\.1)(?::\d+)?\//i.test(text)) return text
+  if (text.startsWith('//')) return `https:${text}`
   return text.replace(/^http:\/\//i, 'https://')
+}
+
+const normalizeProductImage = (value) => {
+  const normalized = normalizeMediaUrl(value)
+  return forceHttps(normalized)
 }
 
 const normalizeProducts = (items) =>
@@ -23,8 +28,9 @@ const normalizeProducts = (items) =>
   }))
 
 const withImageFallback = (value) => {
-  if (!value) return placeholderImage
-  return value
+  const safeUrl = forceHttps(value)
+  if (!safeUrl) return placeholderImage
+  return safeUrl
 }
 
 const Shop = () => {
@@ -145,7 +151,7 @@ const Shop = () => {
               className="shop__card"
             >
               <div className="shop__card-icon">
-                <img src={withImageFallback(product.image)} alt={product.name} />
+                <img src={withImageFallback(product.image)} alt={formatText(product.name)} />
               </div>
               <div className="shop__card-title" style={{ whiteSpace: 'pre-line' }}>
                 {formatText(product.name)}
