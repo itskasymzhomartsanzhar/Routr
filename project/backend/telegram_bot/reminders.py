@@ -36,6 +36,7 @@ INDEX_REBUILD_INTERVAL_SECONDS = 300
 INDEX_VERSION_TTL_SECONDS = 7200
 SEND_CONCURRENCY = 30
 GATHER_CHUNK_SIZE = 500
+MORNING_NO_TIME_REMINDER_HHMM = "08:00"
 
 
 def _is_due_time(reminder_times, now_hhmm: str) -> bool:
@@ -110,6 +111,10 @@ def _dedupe_key(habit_id: int, now_hhmm: str, today_iso: str) -> str:
     return f"tg:reminder:habit:{habit_id}:{today_iso}:{now_hhmm}"
 
 
+def _daily_no_time_dedupe_key(owner_id: int, today_iso: str) -> str:
+    return f"tg:reminder:notime:{owner_id}:{today_iso}:{MORNING_NO_TIME_REMINDER_HHMM}"
+
+
 def _seconds_to_day_end(now_local) -> int:
     tomorrow = (now_local + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
     ttl = int((tomorrow - now_local).total_seconds()) + 3600
@@ -130,6 +135,26 @@ def _build_reminder_text(habit) -> str:
         "Пора отметить привычку\n"
         f"{prefix}{habit.title}\n\n"
         "Откройте Routr и зафиксируйте выполнение."
+    )
+
+
+def _build_no_time_summary_text(habits: list) -> str:
+    if not habits:
+        return ""
+    lines = []
+    for habit in habits[:20]:
+        icon = (habit.icon or "").strip()
+        prefix = f"{icon} " if icon else ""
+        lines.append(f"• {prefix}{habit.title}")
+    hidden_count = max(len(habits) - 20, 0)
+    if hidden_count:
+        lines.append(f"• И ещё {hidden_count}")
+    joined = "\n".join(lines)
+    return (
+        "Доброе утро!\n"
+        "У этих привычек не задано время напоминания:\n\n"
+        f"{joined}\n\n"
+        "Откройте Routr и отметьте выполнение."
     )
 
 
@@ -170,10 +195,20 @@ def _rebuild_index_sync() -> bool:
         timezone_name = _habit_timezone_name(habit)
         pipe.sadd(timezone_set_key, timezone_name)
         op_count += 1
-        for hhmm in _collect_unique_hhmm(habit.reminder_times):
-            index_key = f"{INDEX_KEY_PREFIX}:{version}:tz:{timezone_name}:m:{hhmm}"
-            pipe.sadd(index_key, int(habit.id))
-            touched_keys.add(index_key)
+        reminder_hhmm_values = _collect_unique_hhmm(habit.reminder_times)
+        if reminder_hhmm_values:
+            for hhmm in reminder_hhmm_values:
+                index_key = f"{INDEX_KEY_PREFIX}:{version}:tz:{timezone_name}:m:{hhmm}"
+                pipe.sadd(index_key, int(habit.id))
+                touched_keys.add(index_key)
+                op_count += 1
+                if op_count >= 10000:
+                    pipe.execute()
+                    op_count = 0
+        else:
+            no_time_key = f"{INDEX_KEY_PREFIX}:{version}:tz:{timezone_name}:notime"
+            pipe.sadd(no_time_key, int(habit.id))
+            touched_keys.add(no_time_key)
             op_count += 1
             if op_count >= 10000:
                 pipe.execute()
@@ -217,21 +252,21 @@ def _ensure_index_sync(force: bool = False) -> None:
         _rebuild_index_sync()
 
 
-def _get_due_habit_ids_from_index_sync(now_utc) -> list[int]:
+def _get_due_habit_ids_from_index_sync(now_utc) -> tuple[list[int] | None, list[int]]:
     redis = _get_redis()
     if redis is None:
-        return []
+        return None, []
 
     version = redis.get(INDEX_VERSION_KEY)
     if not version:
-        return []
+        return None, []
     if isinstance(version, bytes):
         version = version.decode("utf-8")
 
     timezone_key = f"{INDEX_KEY_PREFIX}:{version}{INDEX_TIMEZONES_KEY_SUFFIX}"
     raw_timezones = redis.smembers(timezone_key) or []
     if not raw_timezones:
-        return []
+        return [], []
 
     timezone_names_set: set[str] = set()
     for raw_tz in raw_timezones:
@@ -240,35 +275,49 @@ def _get_due_habit_ids_from_index_sync(now_utc) -> list[int]:
         timezone_names_set.add(_normalize_timezone_name(raw_tz))
     timezone_names = list(timezone_names_set)
     if not timezone_names:
-        return []
+        return [], []
 
     pipe = redis.pipeline(transaction=False)
+    query_plan: list[tuple[str, str]] = []
     for timezone_name in timezone_names:
         local_now = now_utc.astimezone(ZoneInfo(timezone_name))
         local_hhmm = local_now.strftime("%H:%M")
         pipe.smembers(f"{INDEX_KEY_PREFIX}:{version}:tz:{timezone_name}:m:{local_hhmm}")
+        query_plan.append(("timed", timezone_name))
+        if local_hhmm == MORNING_NO_TIME_REMINDER_HHMM:
+            pipe.smembers(f"{INDEX_KEY_PREFIX}:{version}:tz:{timezone_name}:notime")
+            query_plan.append(("notime", timezone_name))
     raw_lists = pipe.execute()
 
-    result: list[int] = []
-    seen: set[int] = set()
-    for raw_ids in raw_lists:
+    timed_result: list[int] = []
+    timed_seen: set[int] = set()
+    notime_result: list[int] = []
+    notime_seen: set[int] = set()
+    for idx, raw_ids in enumerate(raw_lists):
+        list_type = query_plan[idx][0] if idx < len(query_plan) else "timed"
         for raw in raw_ids or []:
             try:
                 value = int(raw)
             except Exception:
                 continue
-            if value in seen:
+            if list_type == "notime":
+                if value in notime_seen:
+                    continue
+                notime_seen.add(value)
+                notime_result.append(value)
                 continue
-            seen.add(value)
-            result.append(value)
-    return result
+            if value in timed_seen:
+                continue
+            timed_seen.add(value)
+            timed_result.append(value)
+    return timed_result, notime_result
 
 
 async def _ensure_index(force: bool = False) -> None:
     await sync_to_async(_ensure_index_sync, thread_sensitive=False)(force)
 
 
-async def _get_due_habit_ids_from_index(now_utc) -> list[int]:
+async def _get_due_habit_ids_from_index(now_utc) -> tuple[list[int] | None, list[int]]:
     return await sync_to_async(_get_due_habit_ids_from_index_sync, thread_sensitive=False)(now_utc)
 
 
@@ -339,16 +388,20 @@ async def _fetch_completion_map(habit_ids: list[int], now_utc):
 async def process_due_reminders(bot) -> int:
     now_utc = timezone.now().astimezone(dt_timezone.utc)
 
-    habit_ids = await _get_due_habit_ids_from_index(now_utc)
-    if habit_ids:
-        habits = await _fetch_habits_by_ids(habit_ids)
-    else:
+    timed_habit_ids, no_time_habit_ids = await _get_due_habit_ids_from_index(now_utc)
+    if timed_habit_ids is None:
         habits = await _fetch_candidate_habits_fallback()
+    else:
+        candidate_ids = list(set((timed_habit_ids or []) + (no_time_habit_ids or [])))
+        if not candidate_ids:
+            return 0
+        habits = await _fetch_habits_by_ids(candidate_ids)
     if not habits:
         return 0
 
     habit_context: dict[int, dict] = {}
     due_habits = []
+    due_no_time_habits_by_owner: dict[int, list] = {}
     for habit in habits:
         timezone_name = _habit_timezone_name(habit)
         local_now = now_utc.astimezone(ZoneInfo(timezone_name))
@@ -357,20 +410,28 @@ async def process_due_reminders(bot) -> int:
         local_hhmm = local_now.strftime("%H:%M")
         local_weekday = WEEKDAY_NAMES_RU[local_now.weekday()]
         local_today_iso = local_now.date().isoformat()
-        if not _is_due_time(habit.reminder_times, local_hhmm):
-            continue
         if not _is_scheduled_for_today(habit.repeat_days, local_weekday):
             continue
+        has_custom_times = bool(_collect_unique_hhmm(habit.reminder_times))
         habit_context[habit.id] = {
             "local_hhmm": local_hhmm,
             "local_today_iso": local_today_iso,
             "ttl": _seconds_to_day_end(local_now),
         }
-        due_habits.append(habit)
-    if not due_habits:
+        if has_custom_times and _is_due_time(habit.reminder_times, local_hhmm):
+            due_habits.append(habit)
+            continue
+        if not has_custom_times and local_hhmm == MORNING_NO_TIME_REMINDER_HHMM:
+            owner_id = int(habit.owner_id)
+            due_no_time_habits_by_owner.setdefault(owner_id, []).append(habit)
+
+    if not due_habits and not due_no_time_habits_by_owner:
         return 0
 
-    completion_map = await _fetch_completion_map([habit.id for habit in due_habits], now_utc)
+    completion_ids = [habit.id for habit in due_habits]
+    for owner_habits in due_no_time_habits_by_owner.values():
+        completion_ids.extend([habit.id for habit in owner_habits])
+    completion_map = await _fetch_completion_map(list(set(completion_ids)), now_utc)
     keyboard = _build_reminder_keyboard()
     semaphore = asyncio.Semaphore(SEND_CONCURRENCY)
     sent = 0
@@ -421,7 +482,64 @@ async def process_due_reminders(bot) -> int:
                     exc,
                 )
 
+    async def _send_no_time_summary(owner_id: int, owner_habits: list):
+        nonlocal sent
+        if not owner_habits:
+            return
+        owner_habits = sorted(owner_habits, key=lambda item: (item.title or "", item.id))
+        context = habit_context.get(owner_habits[0].id)
+        if not context:
+            return
+        incomplete_habits = []
+        for habit in owner_habits:
+            completion_key = (habit.id, context["local_today_iso"])
+            if completion_map.get(completion_key, 0) >= max(int(habit.goal or 1), 1):
+                continue
+            incomplete_habits.append(habit)
+        if not incomplete_habits:
+            return
+        key = _daily_no_time_dedupe_key(owner_id, context["local_today_iso"])
+        if not cache.add(key, 1, timeout=context["ttl"]):
+            return
+        text = _build_no_time_summary_text(incomplete_habits)
+        if not text:
+            return
+        async with semaphore:
+            try:
+                await bot.send_message(
+                    chat_id=incomplete_habits[0].owner.telegram_id,
+                    text=text,
+                    reply_markup=keyboard,
+                )
+                sent += 1
+            except TelegramRetryAfter as exc:
+                await asyncio.sleep(float(getattr(exc, "retry_after", 1)) + 0.1)
+                try:
+                    await bot.send_message(
+                        chat_id=incomplete_habits[0].owner.telegram_id,
+                        text=text,
+                        reply_markup=keyboard,
+                    )
+                    sent += 1
+                except Exception as retry_exc:
+                    logger.warning(
+                        "Failed to send no-time summary after retry: owner_id=%s telegram_id=%s error=%s",
+                        owner_id,
+                        incomplete_habits[0].owner.telegram_id,
+                        retry_exc,
+                    )
+            except Exception as exc:
+                logger.warning(
+                    "Failed to send no-time summary: owner_id=%s telegram_id=%s error=%s",
+                    owner_id,
+                    incomplete_habits[0].owner.telegram_id,
+                    exc,
+                )
+
     tasks = [_send_one(habit) for habit in due_habits]
+    tasks.extend(
+        [_send_no_time_summary(owner_id, owner_habits) for owner_id, owner_habits in due_no_time_habits_by_owner.items()]
+    )
     for i in range(0, len(tasks), GATHER_CHUNK_SIZE):
         await asyncio.gather(*tasks[i : i + GATHER_CHUNK_SIZE])
     return sent

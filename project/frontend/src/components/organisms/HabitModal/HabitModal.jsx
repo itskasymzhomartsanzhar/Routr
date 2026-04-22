@@ -26,7 +26,7 @@ const HabitModal = ({
     repeatDays: ['Понедельник', 'Вторник'],
     goal: 1,
     reminder: true,
-    reminderTimes: ['09:30'],
+    reminderTimes: [],
     visibility: 'Приватный',
     endDate: ''
   }
@@ -473,7 +473,7 @@ const HabitModal = ({
                 className="add-habit-modal__add-reminder"
                 type="button"
                 onClick={() => {
-                  const nextTimes = [...habitData.reminderTimes, '09:30']
+                  const nextTimes = [...habitData.reminderTimes, '']
                   setHabitData({ ...habitData, reminderTimes: nextTimes })
                 }}
               >
