@@ -37,6 +37,13 @@ async def main():
     dp.include_router(admin_router)
     dp.include_router(user_router)
 
+    me = await bot.get_me()
+    webhook_info = await bot.get_webhook_info()
+    if webhook_info.url:
+        logger.warning("Webhook is set for @%s (%s). Removing it for polling mode.", me.username, webhook_info.url)
+        await bot.delete_webhook(drop_pending_updates=True)
+    logger.info("🤖 Connected as @%s (id=%s)", me.username, me.id)
+
     reminder_task = asyncio.create_task(run_reminder_loop(bot))
     logger.info("✅ Bot started successfully!")
 

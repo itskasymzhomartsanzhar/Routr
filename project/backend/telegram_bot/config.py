@@ -8,17 +8,20 @@ from aiogram.fsm.state import State, StatesGroup
 
 load_dotenv()
 
-BOT_TOKEN = "8055384836:AAEQcRD8JpY44XpH9SGrf_XFzzvkNs29a6E"
-WEBAPP_URL = os.getenv('WEBAPP_URL', 'https://aniultra.uz')
-BOT_USERNAME = os.getenv('BOT_USERNAME', 'Routr_bot')
+BOT_TOKEN = os.getenv("BOT_TOKEN", "").strip()
+WEBAPP_URL = os.getenv("WEBAPP_URL", "https://routr.swifttest.ru").strip()
+BOT_USERNAME = os.getenv("BOT_USERNAME", "Routr_bot").strip().lstrip("@")
 
-ADMIN_IDS = list(map(int, os.getenv('ADMIN_IDS', '').split(','))) if os.getenv('ADMIN_IDS') else []
+ADMIN_IDS = [
+    int(item.strip())
+    for item in os.getenv("ADMIN_IDS", "").split(",")
+    if item.strip().isdigit()
+]
 
-DJANGO_SETTINGS_MODULE = 'backend.settings'
+DJANGO_SETTINGS_MODULE = "backend.settings"
 
 class AdminBroadcast(StatesGroup):
-    """States for admin broadcast"""
     waiting_message = State()
     confirming = State()
 
-DEFAULT_LANGUAGE = 'ru'
+DEFAULT_LANGUAGE = "ru"
