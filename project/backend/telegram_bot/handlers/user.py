@@ -100,7 +100,7 @@ async def _resolve_novice_title() -> Title | None:
 
 async def _upsert_user_from_telegram(telegram_user: Any, bot: Any) -> tuple[User, bool]:
     user = await User.objects.filter(telegram_id=telegram_user.id).afirst()
-    photo_url = await _get_telegram_photo_url(telegram_user, bot)
+    photo_url = getattr(telegram_user, "photo_url", "") or ""
     if user:
         changed = False
         first_name = telegram_user.first_name or ''
@@ -154,6 +154,18 @@ async def _get_telegram_photo_url(telegram_user: Any, bot: Any) -> str:
     except Exception as exc:
         logger.warning("Failed to fetch Telegram profile photo for user=%s: %s", telegram_user.id, exc)
         return ''
+
+
+async def _safe_answer(message: Message, text: str, reply_markup=None, attempts: int = 2) -> bool:
+    for attempt in range(1, attempts + 1):
+        try:
+            await message.answer(text, reply_markup=reply_markup)
+            return True
+        except TelegramNetworkError as exc:
+            logger.warning("Send message timeout (attempt %s/%s): %s", attempt, attempts, exc)
+            if attempt < attempts:
+                await asyncio.sleep(0.6 * attempt)
+    return False
 
 
 async def _get_or_create_user_by_callback(callback: CallbackQuery) -> User:
@@ -227,13 +239,13 @@ async def _send_payment_message(message: Message, user: User, product: Product):
 
 async def _send_default_webapp(message: Message):
     keyboard = Keyboards.webapp_button('ru')
-    await message.answer(WELCOME_TEXT, reply_markup=keyboard)
+    await _safe_answer(message, WELCOME_TEXT, reply_markup=keyboard)
 
 
 async def _send_profile_webapp(message: Message, profile_user_id: int):
     target_user = await User.objects.filter(id=profile_user_id, is_active=True).afirst()
     if not target_user:
-        await message.answer("Профиль не найден.")
+        await _safe_answer(message, "Профиль не найден.")
         return
     display_name = target_user.first_name or target_user.username or f'User {target_user.id}'
     keyboard = Keyboards.webapp_button(
@@ -241,9 +253,10 @@ async def _send_profile_webapp(message: Message, profile_user_id: int):
         url=_build_profile_webapp_url(target_user.id),
         text='Открыть профиль',
     )
-    await message.answer(
+    await _safe_answer(
+        message,
         f'Посмотри профиль пользователя {display_name}',
-        reply_markup=keyboard
+        reply_markup=keyboard,
     )
 
 
@@ -253,9 +266,10 @@ async def _send_habit_webapp(message: Message, habit_id: int):
         url=_build_habit_webapp_url(habit_id),
         text='Открыть привычку',
     )
-    await message.answer(
+    await _safe_answer(
+        message,
         'Посмотри эту привычку',
-        reply_markup=keyboard
+        reply_markup=keyboard,
     )
 
 
@@ -264,19 +278,19 @@ async def buy_command(message: Message, command: CommandObject):
     try:
         user, _created = await _get_or_create_user(message)
     except Exception:
-        await message.answer("Не удалось определить пользователя.")
+        await _safe_answer(message, "Не удалось определить пользователя.")
         return
 
     raw_arg = (command.args or "").strip()
     try:
         product_id = int(raw_arg) if raw_arg else None
     except ValueError:
-        await message.answer("Используйте: /buy или /buy <product_id>")
+        await _safe_answer(message, "Используйте: /buy или /buy <product_id>")
         return
 
     product = await _get_rub_product(product_id)
     if not product:
-        await message.answer("RUB-продукт для оплаты не найден.")
+        await _safe_answer(message, "RUB-продукт для оплаты не найден.")
         return
 
     if not user.payment_offer_accepted:
@@ -291,18 +305,18 @@ async def offer_accept_callback(callback: CallbackQuery):
     try:
         user = await _get_or_create_user_by_callback(callback)
     except Exception:
-        await callback.message.answer("Не удалось определить пользователя.")
+        await _safe_answer(callback.message, "Не удалось определить пользователя.")
         return
 
     try:
         product_id = int((callback.data or "").split(":", 1)[1])
     except (ValueError, IndexError):
-        await callback.message.answer("Некорректный параметр оплаты.")
+        await _safe_answer(callback.message, "Некорректный параметр оплаты.")
         return
 
     product = await _get_rub_product(product_id)
     if not product:
-        await callback.message.answer("RUB-продукт для оплаты не найден.")
+        await _safe_answer(callback.message, "RUB-продукт для оплаты не найден.")
         return
     safe_name = re.sub(r"<[^>]+>", "", product.name or "").strip()
 
@@ -313,10 +327,10 @@ async def offer_accept_callback(callback: CallbackQuery):
     try:
         payment_url = await _create_payment_url(user, product)
     except RobokassaError as exc:
-        await callback.message.answer(f"Ошибка создания платежа: {exc}")
+        await _safe_answer(callback.message, f"Ошибка создания платежа: {exc}")
         return
     except Exception:
-        await callback.message.answer("Не удалось создать платеж. Попробуйте позже.")
+        await _safe_answer(callback.message, "Не удалось создать платеж. Попробуйте позже.")
         return
 
     await callback.message.edit_text(
@@ -341,7 +355,7 @@ async def start_command(message: Message, command: CommandObject):
         elif buy_product_id:
             product = await _get_rub_product(buy_product_id)
             if not product:
-                await message.answer("RUB-продукт для оплаты не найден.")
+                await _safe_answer(message, "RUB-продукт для оплаты не найден.")
                 return
             if not user.payment_offer_accepted:
                 await _send_offer_message(message, product)
@@ -353,7 +367,6 @@ async def start_command(message: Message, command: CommandObject):
         logger.error(f"Telegram network error in start_command: {e}")
     except Exception as e:
         logger.error(f"Error in start_command: {e}")
-        try:
-            await message.answer("❌ Произошла ошибка. Попробуйте еще раз.")
-        except TelegramNetworkError:
+        sent = await _safe_answer(message, "❌ Произошла ошибка. Попробуйте еще раз.")
+        if not sent:
             logger.error("Failed to send fallback error message due to Telegram timeout")
