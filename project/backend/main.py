@@ -2,6 +2,7 @@ import os
 import sys
 import logging
 import asyncio
+import socket
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
 import django
@@ -9,6 +10,7 @@ django.setup()
 
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
+from aiogram.client.session.aiohttp import AiohttpSession
 from aiogram.enums import ParseMode
 from aiogram.fsm.storage.memory import MemoryStorage
 
@@ -27,8 +29,12 @@ async def main():
     if not BOT_TOKEN:
         raise RuntimeError("BOT_TOKEN is not configured")
 
+    session = AiohttpSession(timeout=20)
+    session._connector_init["family"] = socket.AF_INET
+
     bot = Bot(
         token=BOT_TOKEN,
+        session=session,
         default=DefaultBotProperties(parse_mode=ParseMode.HTML)
     )
 

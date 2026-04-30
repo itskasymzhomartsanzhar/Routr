@@ -8,6 +8,7 @@ from typing import Any
 from aiogram import Router
 from aiogram.types import Message, CallbackQuery
 from aiogram.filters import Command, CommandStart, CommandObject
+from aiogram.exceptions import TelegramNetworkError
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.utils.deep_linking import decode_payload
 
@@ -348,6 +349,11 @@ async def start_command(message: Message, command: CommandObject):
             await _send_payment_message(message, user, product)
         else:
             await _send_default_webapp(message)
+    except TelegramNetworkError as e:
+        logger.error(f"Telegram network error in start_command: {e}")
     except Exception as e:
         logger.error(f"Error in start_command: {e}")
-        await message.answer("❌ Произошла ошибка. Попробуйте еще раз.")
+        try:
+            await message.answer("❌ Произошла ошибка. Попробуйте еще раз.")
+        except TelegramNetworkError:
+            logger.error("Failed to send fallback error message due to Telegram timeout")
