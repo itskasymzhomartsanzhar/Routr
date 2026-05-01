@@ -370,3 +370,13 @@ async def start_command(message: Message, command: CommandObject):
         sent = await _safe_answer(message, "❌ Произошла ошибка. Попробуйте еще раз.")
         if not sent:
             logger.error("Failed to send fallback error message due to Telegram timeout")
+
+
+@user_router.message()
+async def fallback_user_message(message: Message):
+    if message.chat.type != "private":
+        return
+    await _safe_answer(
+        message,
+        "Чтобы начать, отправьте команду /start",
+    )

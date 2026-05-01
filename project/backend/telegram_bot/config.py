@@ -11,6 +11,7 @@ load_dotenv()
 BOT_TOKEN = os.getenv("BOT_TOKEN", "").strip()
 WEBAPP_URL = os.getenv("WEBAPP_URL", "https://routr.swifttest.ru").strip()
 BOT_USERNAME = os.getenv("BOT_USERNAME", "Routr_bot").strip().lstrip("@")
+BOT_PROXY = os.getenv("BOT_PROXY", "185.168.250.249:8000:arzztY:z3yU5W").strip()
 
 ADMIN_IDS = [
     int(item.strip())
