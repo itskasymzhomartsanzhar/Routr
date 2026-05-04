@@ -5,6 +5,7 @@ import { useAuth } from '../../contexts/AuthContext.jsx'
 import { useAppData } from '../../contexts/AppDataContext.jsx'
 import placeholderAvatar from '../../assets/placeholder.png'
 import { buildBalanceFromHabits } from '../../utils/balance.js'
+import { resolveAvatarUrl } from '../../utils/avatar.js'
 import ENDPOINTS from '../../utils/endpoints.js'
 import { request } from '../../utils/api.js'
 import './Profile.scss'
@@ -304,7 +305,7 @@ const Profile = () => {
     }, SETTINGS_DEBOUNCE_MS)
   }
 
-  const avatarUrl = liveUser?.photo_url ? liveUser.photo_url : placeholderAvatar
+  const avatarUrl = resolveAvatarUrl(liveUser?.photo_url || user?.photo_url, placeholderAvatar)
   const displayName = liveUser?.first_name || liveUser?.username || 'Пользователь'
   const isPremium = Boolean(liveUser?.premium_expiration)
   const xpValue = liveUser?.xp ?? 0
@@ -433,8 +434,19 @@ const Profile = () => {
             <div className="profile__card-main">
               <div
                 className="profile__avatar"
-                style={{ backgroundImage: `url(${avatarUrl})` }}
-              ></div>
+              >
+                <img
+                  className="profile__avatar-img"
+                  src={avatarUrl}
+                  alt={displayName}
+                  loading="lazy"
+                  onError={(event) => {
+                    if (event.currentTarget.src !== placeholderAvatar) {
+                      event.currentTarget.src = placeholderAvatar
+                    }
+                  }}
+                />
+              </div>
               <div className="profile__user-meta">
                 <div className="profile__user-name">{displayName}</div>
                 {isPremium && <span className="profile__user-badge">Premium</span>}
@@ -517,7 +529,7 @@ const Profile = () => {
                 {isPremiumPaying
                   ? 'Отправляем...'
                   : standardPremiumProduct
-                    ? `Подписаться за ${standardPremiumProduct.price}₽`
+                    ? `Покупка на 30 дней`
                     : 'Подписаться'}
               </button>
               {yearlyPremiumProduct && yearlyPremiumProduct.id !== standardPremiumProduct?.id && (
@@ -529,7 +541,7 @@ const Profile = () => {
                 >
                   {isPremiumPaying
                     ? 'Отправляем...'
-                    : `На год за ${yearlyPremiumProduct.price}₽`}
+                    : `Покупка на 365 дней`}
                 </button>
               )}
             </div>

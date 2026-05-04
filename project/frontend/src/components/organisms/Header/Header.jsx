@@ -1,21 +1,32 @@
+import { useEffect, useMemo, useState } from 'react'
 import './Header.scss'
-
-const forceHttps = (value) => {
-  const text = String(value || '')
-  if (/^http:\/\/(localhost|127\.0\.0\.1)(?::\d+)?\//i.test(text)) return text
-  return text.replace(/^http:\/\//i, 'https://')
-}
+import placeholderAvatar from '../../../assets/placeholder.png'
+import { resolveAvatarUrl } from '../../../utils/avatar.js'
 
 const Header = ({ userName = 'Mikhail', avatarUrl = null }) => {
-  const safeAvatarUrl = avatarUrl ? forceHttps(avatarUrl) : null
+  const safeAvatarUrl = useMemo(() => resolveAvatarUrl(avatarUrl, placeholderAvatar), [avatarUrl])
+  const [imageFailed, setImageFailed] = useState(false)
+
+  useEffect(() => {
+    setImageFailed(false)
+  }, [safeAvatarUrl])
+
+  const canShowImage = safeAvatarUrl && !imageFailed
+
   return (
     <header className="header">
       <h1 className="header__greeting">
         Привет, {userName} 👋
       </h1>
       <div className="header__avatar">
-        {safeAvatarUrl ? (
-          <img src={safeAvatarUrl} alt={userName} className="header__avatar-img" />
+        {canShowImage ? (
+          <img
+            src={safeAvatarUrl}
+            alt={userName}
+            className="header__avatar-img"
+            loading="lazy"
+            onError={() => setImageFailed(true)}
+          />
         ) : (
           <div className="header__avatar-placeholder">
             {userName.charAt(0).toUpperCase()}

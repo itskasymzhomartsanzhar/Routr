@@ -12,6 +12,7 @@ import { useAppData } from '../../contexts/AppDataContext.jsx'
 import ENDPOINTS from '../../utils/endpoints.js'
 import { api, request } from '../../utils/api.js'
 import { buildBalanceFromHabits } from '../../utils/balance.js'
+import { resolveAvatarUrl } from '../../utils/avatar.js'
 import { preloadProductImagesInBackground } from '../../utils/imagePreload.js'
 import './Home.scss'
 
@@ -312,7 +313,7 @@ const Home = () => {
 
   const liveUser = bootstrap?.user ?? user
   const displayName = liveUser?.first_name || liveUser?.username || 'Пользователь'
-  const avatarUrl = liveUser?.photo_url || null
+  const avatarUrl = resolveAvatarUrl(liveUser?.photo_url || user?.photo_url, null)
   const levelValue = liveUser?.level ?? 1
   const xpValue = liveUser?.xp ?? 0
   const isPremium = liveUser?.is_premium ?? Boolean(liveUser?.premium_expiration && new Date(liveUser.premium_expiration) > new Date())
