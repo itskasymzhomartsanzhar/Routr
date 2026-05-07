@@ -11,7 +11,7 @@ import { request } from '../../utils/api.js'
 import './Profile.scss'
 
 const Profile = () => {
-  const { user, updateProfile } = useAuth()
+  const { user, updateProfile, login } = useAuth()
   const { bootstrap, setBootstrapData } = useAppData()
   const liveUser = bootstrap?.user ?? user
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
@@ -257,9 +257,40 @@ const Profile = () => {
     if (!product?.id || isPremiumPaying) return
     setIsPremiumPaying(true)
     setPremiumStatus({ type: null, message: '' })
+
+    const openExternalLink = (url) => {
+      if (!url) return
+      const tg = window.Telegram?.WebApp
+      if (tg?.openLink) {
+        tg.openLink(url)
+        return
+      }
+      window.open(url, '_blank', 'noopener,noreferrer')
+    }
+
+    const sendRequest = async () => request.post(ENDPOINTS.payments.robokassaSendMessage, { product_id: product.id })
+
     try {
-      const result = await request.post(ENDPOINTS.payments.robokassaSendMessage, { product_id: product.id })
-      if (result?.status === 'offer_sent') {
+      let result
+      try {
+        result = await sendRequest()
+      } catch (error) {
+        if (error?.response?.status === 401) {
+          const reloginUser = await login()
+          if (!reloginUser) throw error
+          result = await sendRequest()
+        } else {
+          throw error
+        }
+      }
+
+      if (result?.status === 'offer_required' && result?.offer_url) {
+        openExternalLink(result.offer_url)
+        setPremiumStatus({ type: 'success', message: 'Оферта открыта. После согласия повторите покупку.' })
+      } else if (result?.status === 'payment_link' && result?.payment_url) {
+        openExternalLink(result.payment_url)
+        setPremiumStatus({ type: 'success', message: 'Telegram временно недоступен. Открыта прямая ссылка на оплату.' })
+      } else if (result?.status === 'offer_sent') {
         setPremiumStatus({ type: 'success', message: 'Сообщение для оплаты отправлено в Telegram' })
       } else {
         setPremiumStatus({ type: 'success', message: 'Сообщение для оплаты отправлено в Telegram' })

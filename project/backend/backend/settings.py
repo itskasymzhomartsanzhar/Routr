@@ -47,6 +47,7 @@ SECURE_HSTS_PRELOAD = True
 
 BOT_TOKEN = os.getenv("BOT_TOKEN", "")
 BOT_USERNAME = os.getenv("BOT_USERNAME", "")
+BOT_PROXY = os.getenv("BOT_PROXY", "185.168.250.249:8000:arzztY:z3yU5W")
 REDIS_URL = os.getenv("REDIS_URL", "redis://127.0.0.1:6379/0")
 USE_REDIS = env_bool("USE_REDIS", True)
 ROBOKASSA_MERCHANT_LOGIN = os.getenv("ROBOKASSA_MERCHANT_LOGIN", "")

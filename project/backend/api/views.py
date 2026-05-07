@@ -9,7 +9,7 @@ import requests
 from datetime import date, datetime, time, timedelta, timezone as dt_timezone
 from decimal import Decimal, InvalidOperation
 from difflib import SequenceMatcher
-from urllib.parse import parse_qsl, unquote, parse_qs
+from urllib.parse import parse_qsl, quote, unquote, parse_qs
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from django.conf import settings
@@ -64,6 +64,10 @@ from .robokassa import (
 logger = logging.getLogger(__name__)
 
 MAX_TIMEZONE_NAME_LENGTH = 64
+
+
+class TelegramDeliveryError(Exception):
+    pass
 
 
 def _force_https_deep(value):
@@ -138,7 +142,7 @@ def _notify_telegram_payment_success(*, telegram_id: int | None, product_name: s
         "text": f"Оплата успешно подтверждена.\nПакет: {product_name}",
     }
     try:
-        requests.post(url, json=payload, timeout=5)
+        requests.post(url, json=payload, timeout=5, **_telegram_proxy_kwargs())
     except Exception as exc:
         logger.warning(
             "Failed to send payment success Telegram message: telegram_id=%s error=%s",
@@ -147,9 +151,35 @@ def _notify_telegram_payment_success(*, telegram_id: int | None, product_name: s
         )
 
 
+def _build_proxy_url(raw_value: str | None) -> str | None:
+    value = (raw_value or "").strip()
+    if not value:
+        return None
+    if "://" in value:
+        return value
+
+    parts = value.split(":")
+    if len(parts) == 4:
+        host, port, username, password = parts
+        user_quoted = quote(username, safe="")
+        pass_quoted = quote(password, safe="")
+        return f"http://{user_quoted}:{pass_quoted}@{host}:{port}"
+    if len(parts) == 2:
+        host, port = parts
+        return f"http://{host}:{port}"
+    return None
+
+
+def _telegram_proxy_kwargs() -> dict:
+    proxy_url = _build_proxy_url(getattr(settings, "BOT_PROXY", ""))
+    if not proxy_url:
+        return {}
+    return {"proxies": {"http": proxy_url, "https": proxy_url}}
+
+
 def _telegram_send_message(*, chat_id: int, text: str, reply_markup: dict | None = None) -> dict:
     if not settings.BOT_TOKEN:
-        raise ValidationError({"detail": "BOT_TOKEN is not configured"})
+        raise TelegramDeliveryError("BOT_TOKEN is not configured")
     url = f"https://api.telegram.org/bot{settings.BOT_TOKEN}/sendMessage"
     payload: dict = {
         "chat_id": int(chat_id),
@@ -158,13 +188,13 @@ def _telegram_send_message(*, chat_id: int, text: str, reply_markup: dict | None
     if reply_markup:
         payload["reply_markup"] = reply_markup
     try:
-        response = requests.post(url, json=payload, timeout=8)
+        response = requests.post(url, json=payload, timeout=8, **_telegram_proxy_kwargs())
         data = response.json() if response.content else {}
     except Exception as exc:
-        raise ValidationError({"detail": f"Failed to send Telegram message: {exc}"}) from exc
+        raise TelegramDeliveryError(f"Failed to send Telegram message: {exc}") from exc
     if not response.ok or not data.get("ok"):
         description = data.get("description") or f"HTTP {response.status_code}"
-        raise ValidationError({"detail": f"Telegram sendMessage failed: {description}"})
+        raise TelegramDeliveryError(f"Telegram sendMessage failed: {description}")
     return data
 
 
@@ -180,7 +210,7 @@ def _telegram_edit_message(*, chat_id: int, message_id: int, text: str, reply_ma
     if reply_markup is not None:
         payload["reply_markup"] = reply_markup
     try:
-        response = requests.post(url, json=payload, timeout=8)
+        response = requests.post(url, json=payload, timeout=8, **_telegram_proxy_kwargs())
         data = response.json() if response.content else {}
     except Exception as exc:
         logger.warning("Failed to edit Telegram message: chat_id=%s message_id=%s error=%s", chat_id, message_id, exc)
@@ -1903,12 +1933,23 @@ def send_robokassa_payment_message(request):
                 [{"text": "Согласиться", "callback_data": f"offer_accept:{product.id}"}],
             ]
         }
-        _telegram_send_message(
-            chat_id=int(user.telegram_id),
-            text="Перед оплатой ознакомьтесь с публичной офертой.\nНажмите «Согласиться», чтобы продолжить.",
-            reply_markup=reply_markup,
-        )
-        return Response({"status": "offer_sent"})
+        try:
+            _telegram_send_message(
+                chat_id=int(user.telegram_id),
+                text="Перед оплатой ознакомьтесь с публичной офертой.\nНажмите «Согласиться», чтобы продолжить.",
+                reply_markup=reply_markup,
+            )
+            return Response({"status": "offer_sent"})
+        except TelegramDeliveryError as exc:
+            logger.warning("Telegram offer message failed for user=%s error=%s", user.id, exc)
+            return Response(
+                {
+                    "status": "offer_required",
+                    "detail": str(exc),
+                    "offer_url": "https://telegra.ph/PUBLICHNAYA-OFERTA-02-25-8",
+                },
+                status=status.HTTP_200_OK,
+            )
 
     missing = []
     if not settings.ROBOKASSA_MERCHANT_LOGIN:
@@ -2002,11 +2043,24 @@ def send_robokassa_payment_message(request):
             [{"text": "Оплатить", "url": payment_url}],
         ]
     }
-    message_payload = _telegram_send_message(
-        chat_id=int(user.telegram_id),
-        text=f"Оплата: {safe_name}\nСумма: {product.price} RUB\n\nОплатите по кнопке ниже.",
-        reply_markup=reply_markup,
-    )
+    try:
+        message_payload = _telegram_send_message(
+            chat_id=int(user.telegram_id),
+            text=f"Оплата: {safe_name}\nСумма: {product.price} RUB\n\nОплатите по кнопке ниже.",
+            reply_markup=reply_markup,
+        )
+    except TelegramDeliveryError as exc:
+        logger.warning("Telegram payment message failed for payment_id=%s user=%s error=%s", payment.id, user.id, exc)
+        return Response(
+            {
+                "status": "payment_link",
+                "detail": str(exc),
+                "payment_url": payment_url,
+                "invoice_id": payment.invoice_id,
+                "payment_id": payment.id,
+            },
+            status=status.HTTP_200_OK,
+        )
     message_id = message_payload.get("result", {}).get("message_id")
     if message_id:
         payment.metadata = {

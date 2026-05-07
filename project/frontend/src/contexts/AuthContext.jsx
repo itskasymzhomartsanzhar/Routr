@@ -96,6 +96,7 @@ export const AuthProvider = ({ children }) => {
 
       const response = await auth.telegram(initData);
       setUser(response.user);
+      return response.user;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Authentication failed');
       console.error('Login error:', err);
