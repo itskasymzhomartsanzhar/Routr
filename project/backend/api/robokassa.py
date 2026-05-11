@@ -5,18 +5,17 @@ from decimal import Decimal
 from typing import Any
 import html
 import os
-from urllib.parse import urlparse, parse_qsl, urlencode, urlunparse
+from urllib.parse import urlparse, parse_qsl
 
+from django.conf import settings
 from .models import Payment
 
 logger = logging.getLogger(__name__)
 
-ROBOKASSA_MERCHANT_LOGIN = "Routr"
-ROBOKASSA_PASSWORD1 = "pCXNSJ44BX6UdOUk65Xj"
-ROBOKASSA_PASSWORD2 = "TFA05xA1thUG9mCEw3xd"
-ROBOKASSA_IS_TEST = False
-ROBOKASSA_API_BASE = "https://auth.robokassa.ru/Merchant/InvoiceServiceWebApi"
-ROBOKASSA_RETURN_BOT_URL = "https://t.me/Routr_bot"
+ROBOKASSA_MERCHANT_LOGIN = str(getattr(settings, "ROBOKASSA_MERCHANT_LOGIN", "") or "").strip()
+ROBOKASSA_PASSWORD1 = str(getattr(settings, "ROBOKASSA_PASSWORD1", "") or "").strip()
+ROBOKASSA_PASSWORD2 = str(getattr(settings, "ROBOKASSA_PASSWORD2", "") or "").strip()
+ROBOKASSA_IS_TEST = bool(getattr(settings, "ROBOKASSA_IS_TEST", False))
 ROBOKASSA_WEBHOOK_BASE_URL = os.getenv("WEBAPP_URL", "").strip()
 
 if ROBOKASSA_WEBHOOK_BASE_URL.endswith("/"):
@@ -56,12 +55,42 @@ def _build_robokassa_client():
         ) from exc
 
     return Robokassa(
-        merchant_login="Routr",
-        password1="pCXNSJ44BX6UdOUk65Xj",
-        password2="TFA05xA1thUG9mCEw3xd",
-        is_test=False,
+        merchant_login=ROBOKASSA_MERCHANT_LOGIN,
+        password1=ROBOKASSA_PASSWORD1,
+        password2=ROBOKASSA_PASSWORD2,
+        is_test=ROBOKASSA_IS_TEST,
         algorithm=HashAlgorithm.md5,
     )
+
+
+def _debug_signature_from_url(payment_url: str) -> None:
+    parsed = urlparse(payment_url)
+    params = dict(parse_qsl(parsed.query, keep_blank_values=True))
+    merchant = str(params.get("MerchantLogin", ""))
+    out_sum = str(params.get("OutSum", ""))
+    inv_id = str(params.get("InvId", ""))
+    signature = str(params.get("SignatureValue", ""))
+    if not merchant or not out_sum or not signature:
+        return
+
+    base = f"{merchant}:{out_sum}:{inv_id}:{ROBOKASSA_PASSWORD1}"
+    expected = hashlib.md5(base.encode("utf-8")).hexdigest()
+    if expected.lower() != signature.lower():
+        logger.error(
+            "Robokassa URL signature mismatch before redirect: expected=%s provided=%s merchant=%s out_sum=%s inv_id=%s",
+            expected,
+            signature,
+            merchant,
+            out_sum,
+            inv_id,
+        )
+    else:
+        logger.info(
+            "Robokassa URL signature validated locally: merchant=%s out_sum=%s inv_id=%s",
+            merchant,
+            out_sum,
+            inv_id,
+        )
 
 
 def create_invoice_link_with_meta(payment: Payment) -> tuple[str, dict[str, Any]]:
@@ -73,24 +102,15 @@ def create_invoice_link_with_meta(payment: Payment) -> tuple[str, dict[str, Any]
         payment_url = client.generate_open_payment_link(
             out_sum=out_sum,
             inv_id=int(payment.invoice_id),
+            success_url=ROBOKASSA_SUCCESS_URL or None,
+            success_url_method="GET" if ROBOKASSA_SUCCESS_URL else None,
+            fail_url=ROBOKASSA_FAIL_URL or None,
+            fail_url_method="GET" if ROBOKASSA_FAIL_URL else None,
         )
         if hasattr(payment_url, "url"):
             payment_url = getattr(payment_url, "url")
         payment_url = html.unescape(str(payment_url))
-        if ROBOKASSA_SUCCESS_URL or ROBOKASSA_FAIL_URL or ROBOKASSA_RETURN_BOT_URL:
-            parsed = urlparse(payment_url)
-            params = dict(parse_qsl(parsed.query, keep_blank_values=True))
-            if ROBOKASSA_SUCCESS_URL:
-                params["SuccessURL"] = ROBOKASSA_SUCCESS_URL
-                params["SuccessURLMethod"] = "GET"
-            if ROBOKASSA_FAIL_URL:
-                params["FailURL"] = ROBOKASSA_FAIL_URL
-                params["FailURLMethod"] = "GET"
-            if ROBOKASSA_RETURN_BOT_URL:
-                params.setdefault("SuccessURL", ROBOKASSA_RETURN_BOT_URL)
-                params.setdefault("FailURL", ROBOKASSA_RETURN_BOT_URL)
-            new_query = urlencode(params, doseq=True)
-            payment_url = urlunparse(parsed._replace(query=new_query))
+        _debug_signature_from_url(payment_url)
     except RobokassaError:
         raise
     except Exception as exc:

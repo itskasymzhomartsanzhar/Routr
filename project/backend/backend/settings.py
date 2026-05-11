@@ -53,7 +53,7 @@ USE_REDIS = env_bool("USE_REDIS", True)
 ROBOKASSA_MERCHANT_LOGIN = os.getenv("ROBOKASSA_MERCHANT_LOGIN", "")
 ROBOKASSA_PASSWORD1 = os.getenv("ROBOKASSA_PASSWORD1", "")
 ROBOKASSA_PASSWORD2 = os.getenv("ROBOKASSA_PASSWORD2", "")
-ROBOKASSA_IS_TEST = True
+ROBOKASSA_IS_TEST = env_bool("ROBOKASSA_IS_TEST", True)
 ROBOKASSA_API_BASE = "https://services.robokassa.ru/InvoiceServiceWebApi/api/CreateInvoice"
 
 CORS_ORIGIN_ALLOW_ALL = env_bool("CORS_ALLOW_ALL_ORIGINS", True if DEBUG else False)
