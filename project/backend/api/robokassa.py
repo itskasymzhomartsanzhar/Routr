@@ -12,10 +12,10 @@ from .models import Payment
 
 logger = logging.getLogger(__name__)
 
-ROBOKASSA_MERCHANT_LOGIN = str(getattr(settings, "ROBOKASSA_MERCHANT_LOGIN", "") or "").strip()
-ROBOKASSA_PASSWORD1 = str(getattr(settings, "ROBOKASSA_PASSWORD1", "") or "").strip()
-ROBOKASSA_PASSWORD2 = str(getattr(settings, "ROBOKASSA_PASSWORD2", "") or "").strip()
-ROBOKASSA_IS_TEST = bool(getattr(settings, "ROBOKASSA_IS_TEST", False))
+ROBOKASSA_MERCHANT_LOGIN = "Routr"
+ROBOKASSA_PASSWORD1 = "pCXNSJ44BX6UdOUk65Xj"
+ROBOKASSA_PASSWORD2 = "TFA05xA1thUG9mCEw3xd"
+ROBOKASSA_IS_TEST = False
 ROBOKASSA_WEBHOOK_BASE_URL = os.getenv("WEBAPP_URL", "").strip()
 
 if ROBOKASSA_WEBHOOK_BASE_URL.endswith("/"):
@@ -102,10 +102,6 @@ def create_invoice_link_with_meta(payment: Payment) -> tuple[str, dict[str, Any]
         payment_url = client.generate_open_payment_link(
             out_sum=out_sum,
             inv_id=int(payment.invoice_id),
-            success_url=ROBOKASSA_SUCCESS_URL or None,
-            success_url_method="GET" if ROBOKASSA_SUCCESS_URL else None,
-            fail_url=ROBOKASSA_FAIL_URL or None,
-            fail_url_method="GET" if ROBOKASSA_FAIL_URL else None,
         )
         if hasattr(payment_url, "url"):
             payment_url = getattr(payment_url, "url")
