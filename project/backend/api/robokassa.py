@@ -5,7 +5,7 @@ from decimal import Decimal
 from typing import Any
 import html
 import os
-from urllib.parse import urlparse, parse_qsl
+from urllib.parse import urlparse, parse_qsl, urlencode
 
 from django.conf import settings
 from .models import Payment
@@ -93,31 +93,54 @@ def _debug_signature_from_url(payment_url: str) -> None:
         )
 
 
+def _normalize_out_sum_for_signature(value: Decimal) -> str:
+    normalized = value.quantize(Decimal("0.01")).normalize()
+    text = format(normalized, "f")
+    if "." in text:
+        text = text.rstrip("0").rstrip(".")
+    return text or "0"
+
+
+def _build_simple_payment_url(payment: Payment) -> str:
+    out_sum = _normalize_out_sum_for_signature(payment.amount)
+    inv_id = int(payment.invoice_id or payment.id or 0)
+    signature_base = f"{ROBOKASSA_MERCHANT_LOGIN}:{out_sum}:{inv_id}:{ROBOKASSA_PASSWORD1}"
+    signature_value = hashlib.md5(signature_base.encode("utf-8")).hexdigest()
+    params = {
+        "MerchantLogin": ROBOKASSA_MERCHANT_LOGIN,
+        "OutSum": out_sum,
+        "InvId": str(inv_id),
+        "SignatureValue": signature_value,
+        "Culture": "ru",
+    }
+    if ROBOKASSA_IS_TEST:
+        params["IsTest"] = "1"
+    logger.info(
+        "Robokassa signature base prepared: payment_id=%s invoice_id=%s base=%s signature=%s",
+        payment.id,
+        inv_id,
+        signature_base,
+        signature_value,
+    )
+    return f"https://auth.robokassa.ru/Merchant/Index.aspx?{urlencode(params)}"
+
+
 def create_invoice_link_with_meta(payment: Payment) -> tuple[str, dict[str, Any]]:
     if not ROBOKASSA_MERCHANT_LOGIN or not ROBOKASSA_PASSWORD1 or not ROBOKASSA_PASSWORD2:
         raise RobokassaError("Robokassa credentials are not configured", stage="config")
     try:
-        client = _build_robokassa_client()
-        out_sum = payment.amount.quantize(Decimal("0.01"))
-        payment_url = client.generate_open_payment_link(
-            out_sum=out_sum,
-            inv_id=int(payment.invoice_id),
-        )
-        if hasattr(payment_url, "url"):
-            payment_url = getattr(payment_url, "url")
+        payment_url = _build_simple_payment_url(payment)
         payment_url = html.unescape(str(payment_url))
         _debug_signature_from_url(payment_url)
-    except RobokassaError:
-        raise
     except Exception as exc:
         logger.exception(
-            "Robokassa SDK link generation failed: payment_id=%s invoice_id=%s",
+            "Robokassa payment link generation failed: payment_id=%s invoice_id=%s",
             payment.id,
             payment.invoice_id,
         )
         raise RobokassaError(
             f"Failed to generate Robokassa payment link: {exc}",
-            stage="sdk_generate_link",
+            stage="build_payment_link",
         ) from exc
 
     if not payment_url:
@@ -127,13 +150,13 @@ def create_invoice_link_with_meta(payment: Payment) -> tuple[str, dict[str, Any]
         )
 
     logger.info(
-        "Robokassa SDK payment link generated: payment_id=%s invoice_id=%s payment_url=%s",
+        "Robokassa payment link generated: payment_id=%s invoice_id=%s payment_url=%s",
         payment.id,
         payment.invoice_id,
         payment_url,
     )
     return str(payment_url), {
-        "source": "robokassa_sdk",
+        "source": "redirect_link",
         "warning": None,
         "invoice_api_status": None,
     }
