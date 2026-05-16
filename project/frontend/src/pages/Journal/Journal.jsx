@@ -1,12 +1,13 @@
-import { useEffect, useMemo, useState } from 'react'
-import Header from '../../components/organisms/Header/Header.jsx'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import BottomNav from '../../components/organisms/Menu/Menu.jsx'
 import { api } from '../../utils/api.js'
 import { useAppData } from '../../contexts/AppDataContext.jsx'
 import './Journal.scss'
 
+const LIVE_REFRESH_MS = 7000
+
 const Journal = () => {
-  const { bootstrap } = useAppData()
+  const { bootstrap, setBootstrapData } = useAppData()
   const [titles, setTitles] = useState(() => bootstrap?.titles ?? [])
   const [quests, setQuests] = useState(() => bootstrap?.quests ?? [])
 
@@ -15,31 +16,58 @@ const Journal = () => {
     if (Array.isArray(bootstrap?.quests)) setQuests(bootstrap.quests)
   }, [bootstrap?.titles, bootstrap?.quests])
 
-  useEffect(() => {
-    if (titles.length) return
-    const loadTitles = async () => {
-      try {
-        const response = await api.xp.titles()
-        setTitles(response?.items ?? [])
-      } catch (error) {
-        setTitles([])
-      }
+  const syncLiveProgress = useCallback(async () => {
+    try {
+      const [titlesResponse, questsResponse] = await Promise.all([
+        api.xp.titles(),
+        api.xp.quests(),
+      ])
+      const nextTitles = Array.isArray(titlesResponse?.items) ? titlesResponse.items : []
+      const nextQuests = Array.isArray(questsResponse?.items) ? questsResponse.items : []
+      setTitles(nextTitles)
+      setQuests(nextQuests)
+      setBootstrapData((prev) => {
+        const currentTitleName = nextTitles.find((item) => item?.is_current)?.name
+        return {
+          ...prev,
+          titles: nextTitles,
+          quests: nextQuests,
+          user: prev?.user
+            ? {
+              ...prev.user,
+              title: currentTitleName ?? prev.user.title,
+            }
+            : prev?.user,
+        }
+      })
+    } catch (_error) {
     }
-    loadTitles()
-  }, [])
+  }, [setBootstrapData])
 
   useEffect(() => {
-    if (quests.length) return
-    const loadQuests = async () => {
-      try {
-        const response = await api.xp.quests()
-        setQuests(response?.items ?? [])
-      } catch (error) {
-        setQuests([])
+    syncLiveProgress()
+  }, [syncLiveProgress])
+
+  useEffect(() => {
+    const onProgressUpdated = () => {
+      syncLiveProgress()
+    }
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') {
+        syncLiveProgress()
       }
     }
-    loadQuests()
-  }, [])
+    const intervalId = window.setInterval(syncLiveProgress, LIVE_REFRESH_MS)
+    window.addEventListener('routr:progress-updated', onProgressUpdated)
+    window.addEventListener('focus', onProgressUpdated)
+    document.addEventListener('visibilitychange', onVisible)
+    return () => {
+      window.clearInterval(intervalId)
+      window.removeEventListener('routr:progress-updated', onProgressUpdated)
+      window.removeEventListener('focus', onProgressUpdated)
+      document.removeEventListener('visibilitychange', onVisible)
+    }
+  }, [syncLiveProgress])
 
   const questGroups = useMemo(() => {
     return quests.reduce((acc, quest) => {

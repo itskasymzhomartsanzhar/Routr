@@ -259,6 +259,13 @@ const Home = () => {
           titles: nextTitles,
         }
       })
+      window.dispatchEvent(new CustomEvent('routr:progress-updated', {
+        detail: {
+          xp: Number(updated?.user_progress?.xp ?? 0),
+          level: Number(updated?.user_progress?.level ?? 0),
+          title: updated?.user_progress?.title ?? '',
+        }
+      }))
     } catch (error) {
       if (error?.response?.status === 400) {
         await loadHabits(selectedDate)

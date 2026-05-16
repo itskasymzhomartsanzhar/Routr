@@ -1237,6 +1237,7 @@ def _check_and_award_quests(user: User, target_date: date | None = None) -> list
                     else:
                         _persist_interval_xp_without_redis(user.id, awarded)
                 created.append(uq)
+    _sync_user_title(user, save=True)
     return created
 
 

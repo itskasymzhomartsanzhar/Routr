@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import BottomNav from '../../components/organisms/Menu/Menu.jsx'
 import { api } from '../../utils/api.js'
 import { useAppData } from '../../contexts/AppDataContext.jsx'
@@ -19,42 +19,47 @@ const PRIVILEGE_LABELS = {
   stats_days: 'Статистика, дней'
 }
 
+const LIVE_REFRESH_MS = 7000
+
 const Quests = () => {
-  const { bootstrap } = useAppData()
+  const { bootstrap, setBootstrapData } = useAppData()
   const [activeGroup, setActiveGroup] = useState('novice')
   const [quests, setQuests] = useState(() => bootstrap?.quests ?? [])
   const [titles, setTitles] = useState(() => bootstrap?.titles ?? [])
+  const lastAutoGroupRef = useRef('')
 
   useEffect(() => {
     if (Array.isArray(bootstrap?.titles)) setTitles(bootstrap.titles)
     if (Array.isArray(bootstrap?.quests)) setQuests(bootstrap.quests)
   }, [bootstrap?.titles, bootstrap?.quests])
 
-  useEffect(() => {
-    if (quests.length) return
-    const loadQuests = async () => {
-      try {
-        const response = await api.xp.quests()
-        setQuests(response?.items ?? [])
-      } catch (error) {
-        setQuests([])
-      }
+  const syncLiveProgress = useCallback(async () => {
+    try {
+      const [titlesResponse, questsResponse] = await Promise.all([
+        api.xp.titles(),
+        api.xp.quests(),
+      ])
+      const nextTitles = Array.isArray(titlesResponse?.items) ? titlesResponse.items : []
+      const nextQuests = Array.isArray(questsResponse?.items) ? questsResponse.items : []
+      setTitles(nextTitles)
+      setQuests(nextQuests)
+      setBootstrapData((prev) => {
+        const currentTitleName = nextTitles.find((item) => item?.is_current)?.name
+        return {
+          ...prev,
+          titles: nextTitles,
+          quests: nextQuests,
+          user: prev?.user
+            ? {
+              ...prev.user,
+              title: currentTitleName ?? prev.user.title,
+            }
+            : prev?.user,
+        }
+      })
+    } catch (_error) {
     }
-    loadQuests()
-  }, [])
-
-  useEffect(() => {
-    if (titles.length) return
-    const loadTitles = async () => {
-      try {
-        const response = await api.xp.titles()
-        setTitles(response?.items ?? [])
-      } catch (error) {
-        setTitles([])
-      }
-    }
-    loadTitles()
-  }, [])
+  }, [setBootstrapData])
 
   const grouped = useMemo(() => {
     return quests.reduce((acc, quest) => {
@@ -69,6 +74,41 @@ const Quests = () => {
   const sortedTitles = useMemo(() => {
     return [...titles].sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
   }, [titles])
+  const currentTitleCode = useMemo(() => {
+    return sortedTitles.find((title) => title?.is_current)?.code || 'novice'
+  }, [sortedTitles])
+
+  useEffect(() => {
+    syncLiveProgress()
+  }, [syncLiveProgress])
+
+  useEffect(() => {
+    const onProgressUpdated = () => {
+      syncLiveProgress()
+    }
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') {
+        syncLiveProgress()
+      }
+    }
+    const intervalId = window.setInterval(syncLiveProgress, LIVE_REFRESH_MS)
+    window.addEventListener('routr:progress-updated', onProgressUpdated)
+    window.addEventListener('focus', onProgressUpdated)
+    document.addEventListener('visibilitychange', onVisible)
+    return () => {
+      window.clearInterval(intervalId)
+      window.removeEventListener('routr:progress-updated', onProgressUpdated)
+      window.removeEventListener('focus', onProgressUpdated)
+      document.removeEventListener('visibilitychange', onVisible)
+    }
+  }, [syncLiveProgress])
+
+  useEffect(() => {
+    if (!currentTitleCode) return
+    if (lastAutoGroupRef.current === currentTitleCode) return
+    setActiveGroup(currentTitleCode)
+    lastAutoGroupRef.current = currentTitleCode
+  }, [currentTitleCode])
 
   return (
     <div className="quests">
