@@ -1,11 +1,13 @@
 import hashlib
 import hmac
 import logging
+import json
+import re
 from decimal import Decimal
 from typing import Any
 import html
 import os
-from urllib.parse import urlparse, parse_qsl, urlencode
+from urllib.parse import urlparse, parse_qsl, urlencode, quote
 
 from django.conf import settings
 from .models import Payment
@@ -23,6 +25,14 @@ if ROBOKASSA_WEBHOOK_BASE_URL.endswith("/"):
 
 ROBOKASSA_SUCCESS_URL = f"{ROBOKASSA_WEBHOOK_BASE_URL}/v1/api/payments/robokassa/success/" if ROBOKASSA_WEBHOOK_BASE_URL else ""
 ROBOKASSA_FAIL_URL = f"{ROBOKASSA_WEBHOOK_BASE_URL}/v1/api/payments/robokassa/fail/" if ROBOKASSA_WEBHOOK_BASE_URL else ""
+ROBOKASSA_RECEIPT_SNO = str(getattr(settings, "ROBOKASSA_RECEIPT_SNO", "") or "").strip()
+ROBOKASSA_RECEIPT_TAX = str(getattr(settings, "ROBOKASSA_RECEIPT_TAX", "none") or "none").strip()
+ROBOKASSA_RECEIPT_PAYMENT_METHOD = str(
+    getattr(settings, "ROBOKASSA_RECEIPT_PAYMENT_METHOD", "full_payment") or "full_payment"
+).strip()
+ROBOKASSA_RECEIPT_PAYMENT_OBJECT = str(
+    getattr(settings, "ROBOKASSA_RECEIPT_PAYMENT_OBJECT", "service") or "service"
+).strip()
 
 
 class RobokassaError(Exception):
@@ -73,7 +83,11 @@ def _debug_signature_from_url(payment_url: str) -> None:
     if not merchant or not out_sum or not signature:
         return
 
-    base = f"{merchant}:{out_sum}:{inv_id}:{ROBOKASSA_PASSWORD1}"
+    receipt = params.get("Receipt")
+    if receipt:
+        base = f"{merchant}:{out_sum}:{inv_id}:{receipt}:{ROBOKASSA_PASSWORD1}"
+    else:
+        base = f"{merchant}:{out_sum}:{inv_id}:{ROBOKASSA_PASSWORD1}"
     expected = hashlib.md5(base.encode("utf-8")).hexdigest()
     if expected.lower() != signature.lower():
         logger.error(
@@ -101,26 +115,58 @@ def _normalize_out_sum_for_signature(value: Decimal) -> str:
     return text or "0"
 
 
+def _normalize_receipt_item_name(raw_name: str) -> str:
+    text = re.sub(r"<[^>]+>", " ", str(raw_name or ""))
+    text = re.sub(r"[\x00-\x1f\x7f]+", " ", text)
+    text = re.sub(r"\s+", " ", text).strip()
+    if not text:
+        text = "Покупка в Routr"
+    if len(text) > 128:
+        text = text[:128].rstrip()
+    return text
+
+
+def _build_receipt_payload(payment: Payment) -> dict[str, Any]:
+    amount = float(payment.amount.quantize(Decimal("0.01")))
+    item = {
+        "name": _normalize_receipt_item_name(payment.product.name if payment.product_id else ""),
+        "quantity": 1,
+        "sum": amount,
+        "payment_method": ROBOKASSA_RECEIPT_PAYMENT_METHOD,
+        "payment_object": ROBOKASSA_RECEIPT_PAYMENT_OBJECT,
+        "tax": ROBOKASSA_RECEIPT_TAX,
+    }
+    receipt: dict[str, Any] = {"items": [item]}
+    if ROBOKASSA_RECEIPT_SNO:
+        receipt["sno"] = ROBOKASSA_RECEIPT_SNO
+    return receipt
+
+
 def _build_simple_payment_url(payment: Payment) -> str:
     out_sum = _normalize_out_sum_for_signature(payment.amount)
     inv_id = int(payment.invoice_id or payment.id or 0)
-    signature_base = f"{ROBOKASSA_MERCHANT_LOGIN}:{out_sum}:{inv_id}:{ROBOKASSA_PASSWORD1}"
+    receipt_payload = _build_receipt_payload(payment)
+    receipt_json = json.dumps(receipt_payload, ensure_ascii=False, separators=(",", ":"))
+    receipt_encoded = quote(receipt_json, safe="")
+    signature_base = f"{ROBOKASSA_MERCHANT_LOGIN}:{out_sum}:{inv_id}:{receipt_encoded}:{ROBOKASSA_PASSWORD1}"
     signature_value = hashlib.md5(signature_base.encode("utf-8")).hexdigest()
     params = {
         "MerchantLogin": ROBOKASSA_MERCHANT_LOGIN,
         "OutSum": out_sum,
         "InvId": str(inv_id),
+        "Receipt": receipt_encoded,
         "SignatureValue": signature_value,
         "Culture": "ru",
     }
     if ROBOKASSA_IS_TEST:
         params["IsTest"] = "1"
     logger.info(
-        "Robokassa signature base prepared: payment_id=%s invoice_id=%s base=%s signature=%s",
+        "Robokassa signature base prepared: payment_id=%s invoice_id=%s base=%s signature=%s receipt=%s",
         payment.id,
         inv_id,
         signature_base,
         signature_value,
+        receipt_payload,
     )
     return f"https://auth.robokassa.ru/Merchant/Index.aspx?{urlencode(params)}"
 
