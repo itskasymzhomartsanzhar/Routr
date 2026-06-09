@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { PipProvider } from './contexts/PipContext';
 import { AppDataProvider } from './contexts/AppDataContext';
+import { ThemeProvider } from './contexts/ThemeContext.jsx';
 import './styles/global.scss';
 import App from './App';
 import { initTelegramWebApp } from './utils/telegram.js';
@@ -62,9 +63,11 @@ createRoot(document.getElementById('root')).render(
     <BrowserRouter>
       <AuthProvider>
         <AppDataProvider>
-          <PipProvider>
-            <App />
-          </PipProvider>
+          <ThemeProvider>
+            <PipProvider>
+              <App />
+            </PipProvider>
+          </ThemeProvider>
         </AppDataProvider>
       </AuthProvider>
     </BrowserRouter>

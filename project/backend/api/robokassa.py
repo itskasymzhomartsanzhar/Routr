@@ -25,14 +25,10 @@ if ROBOKASSA_WEBHOOK_BASE_URL.endswith("/"):
 
 ROBOKASSA_SUCCESS_URL = f"{ROBOKASSA_WEBHOOK_BASE_URL}/v1/api/payments/robokassa/success/" if ROBOKASSA_WEBHOOK_BASE_URL else ""
 ROBOKASSA_FAIL_URL = f"{ROBOKASSA_WEBHOOK_BASE_URL}/v1/api/payments/robokassa/fail/" if ROBOKASSA_WEBHOOK_BASE_URL else ""
-ROBOKASSA_RECEIPT_SNO = str(getattr(settings, "ROBOKASSA_RECEIPT_SNO", "") or "").strip()
-ROBOKASSA_RECEIPT_TAX = str(getattr(settings, "ROBOKASSA_RECEIPT_TAX", "none") or "none").strip()
-ROBOKASSA_RECEIPT_PAYMENT_METHOD = str(
-    getattr(settings, "ROBOKASSA_RECEIPT_PAYMENT_METHOD", "full_payment") or "full_payment"
-).strip()
-ROBOKASSA_RECEIPT_PAYMENT_OBJECT = str(
-    getattr(settings, "ROBOKASSA_RECEIPT_PAYMENT_OBJECT", "service") or "service"
-).strip()
+ROBOKASSA_RECEIPT_SNO = ""
+ROBOKASSA_RECEIPT_TAX = "none"
+ROBOKASSA_RECEIPT_PAYMENT_METHOD =  "full_payment"
+ROBOKASSA_RECEIPT_PAYMENT_OBJECT = "service"
 
 
 class RobokassaError(Exception):

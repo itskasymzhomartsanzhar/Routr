@@ -14,6 +14,7 @@ from .models import (
     Quest,
     Title,
     User,
+    UserBalanceCategory,
     UserQuest,
     XpTransaction,
 )
@@ -146,6 +147,14 @@ class HabitCompletionAdmin(admin.ModelAdmin):
     list_display = ("habit", "date", "count")
     list_filter = ("date",)
     search_fields = ("habit__title", "habit__owner__username", "habit__owner__first_name")
+
+
+@admin.register(UserBalanceCategory, site=admin_site)
+class UserBalanceCategoryAdmin(admin.ModelAdmin):
+    list_display = ("user", "category_name", "public_total", "private_total", "updated_at")
+    list_filter = ("category_name", "updated_at")
+    search_fields = ("user__username", "user__first_name", "user__telegram_id", "category_name")
+    readonly_fields = ("updated_at",)
 
 
 @admin.register(HabitCopy, site=admin_site)

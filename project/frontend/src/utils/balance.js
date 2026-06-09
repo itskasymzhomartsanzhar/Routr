@@ -17,3 +17,42 @@ export const buildBalanceFromHabits = (rawHabits, { publicOnly = false } = {}) =
   const total = items.reduce((sum, item) => sum + item.value, 0)
   return { total, items }
 }
+
+const toBalanceMap = (balance) => {
+  const output = {}
+  ;(balance?.items || []).forEach((item) => {
+    if (!item?.label) return
+    output[item.label] = (output[item.label] || 0) + Number(item.value || 0)
+  })
+  return output
+}
+
+const fromBalanceMap = (map) => {
+  const items = Object.entries(map)
+    .filter(([, value]) => Number(value || 0) >= 0)
+    .map(([label, value]) => ({ label, value }))
+  return {
+    total: items.reduce((sum, item) => sum + Number(item.value || 0), 0),
+    items
+  }
+}
+
+export const mergeBalanceWithLiveHabits = (previousBalance, previousHabits, nextHabits, { publicOnly = false } = {}) => {
+  const previousMap = toBalanceMap(previousBalance)
+  const previousLiveMap = toBalanceMap(buildBalanceFromHabits(previousHabits, { publicOnly }))
+  const nextLiveMap = toBalanceMap(buildBalanceFromHabits(nextHabits, { publicOnly }))
+  const labels = new Set([
+    ...Object.keys(previousMap),
+    ...Object.keys(previousLiveMap),
+    ...Object.keys(nextLiveMap)
+  ])
+  const merged = {}
+  labels.forEach((label) => {
+    const historical = Math.max((previousMap[label] || 0) - (previousLiveMap[label] || 0), 0)
+    const value = historical + (nextLiveMap[label] || 0)
+    if (value > 0 || label in nextLiveMap) {
+      merged[label] = value
+    }
+  })
+  return fromBalanceMap(merged)
+}

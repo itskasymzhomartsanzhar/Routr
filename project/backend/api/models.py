@@ -252,6 +252,28 @@ class HabitCompletion(models.Model):
         return f"{self.habit_id} {self.date} ({self.count})"
 
 
+class UserBalanceCategory(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="balance_category_totals")
+    category_name = models.CharField("Категория", max_length=120)
+    public_total = models.PositiveIntegerField("Публичные выполнения", default=0)
+    private_total = models.PositiveIntegerField("Приватные выполнения", default=0)
+    updated_at = models.DateTimeField("Обновлена", auto_now=True)
+
+    class Meta:
+        verbose_name = "Итог колеса баланса"
+        verbose_name_plural = "Итоги колеса баланса"
+        ordering = ("user_id", "category_name")
+        constraints = [
+            models.UniqueConstraint(fields=["user", "category_name"], name="unique_user_balance_category"),
+        ]
+        indexes = [
+            models.Index(fields=["user", "category_name"]),
+        ]
+
+    def __str__(self):
+        return f"{self.user_id} {self.category_name}"
+
+
 class HabitCopy(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="habit_copies")
     source_habit = models.ForeignKey(Habit, on_delete=models.CASCADE, related_name="habit_copies")
@@ -420,3 +442,23 @@ def reassign_habits_on_category_delete(sender, instance, **kwargs):
     if not fallback:
         fallback = Category.objects.create(name="Личное")
     Habit.objects.filter(category=instance).update(category=fallback)
+
+
+@receiver(pre_delete, sender=Habit)
+def preserve_balance_on_habit_delete(sender, instance, **kwargs):
+    if not instance.owner_id:
+        return
+    category_name = instance.category.name if instance.category_id and instance.category else ""
+    if not category_name:
+        return
+    total = HabitCompletion.objects.filter(habit=instance, count__gte=instance.goal).count()
+    if total <= 0:
+        return
+    balance, _created = UserBalanceCategory.objects.get_or_create(
+        user_id=instance.owner_id,
+        category_name=category_name,
+    )
+    field_name = "public_total" if instance.visibility == "Публичный" else "private_total"
+    UserBalanceCategory.objects.filter(pk=balance.pk).update(**{
+        field_name: models.F(field_name) + total,
+    })

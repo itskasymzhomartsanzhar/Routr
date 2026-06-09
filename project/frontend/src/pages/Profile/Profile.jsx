@@ -3,8 +3,9 @@ import Header from '../../components/organisms/Header/Header.jsx'
 import BottomNav from '../../components/organisms/Menu/Menu.jsx'
 import { useAuth } from '../../contexts/AuthContext.jsx'
 import { useAppData } from '../../contexts/AppDataContext.jsx'
+import { useTheme } from '../../contexts/useTheme.js'
 import placeholderAvatar from '../../assets/placeholder.png'
-import { buildBalanceFromHabits } from '../../utils/balance.js'
+import { mergeBalanceWithLiveHabits } from '../../utils/balance.js'
 import { resolveAvatarUrl } from '../../utils/avatar.js'
 import ENDPOINTS from '../../utils/endpoints.js'
 import { request } from '../../utils/api.js'
@@ -13,6 +14,7 @@ import './Profile.scss'
 const Profile = () => {
   const { user, updateProfile, login } = useAuth()
   const { bootstrap, setBootstrapData } = useAppData()
+  const { isDark, toggleTheme } = useTheme()
   const liveUser = bootstrap?.user ?? user
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [isSettingsClosing, setIsSettingsClosing] = useState(false)
@@ -185,6 +187,9 @@ const Profile = () => {
     setIsSettingsSaving(true)
     try {
       await updateProfile(payload)
+      const freshBalance = Object.prototype.hasOwnProperty.call(payload, 'balance_wheel')
+        ? await request.get(ENDPOINTS.habits.balance)
+        : null
       settingsSnapshotRef.current = { ...settingsSnapshotRef.current, ...payload }
       setBootstrapData((prev) => {
         const nextUser = prev?.user ? { ...prev.user, ...payload } : prev?.user
@@ -204,7 +209,7 @@ const Profile = () => {
         return {
           ...prev,
           user: nextUser,
-          balance: buildBalanceFromHabits(nextHabits, { publicOnly: usePublicOnlyBalance }),
+          balance: freshBalance ?? mergeBalanceWithLiveHabits(prev?.balance, nextHabits, nextHabits, { publicOnly: usePublicOnlyBalance }),
           ...(nextLeaderboard ? { leaderboard: nextLeaderboard } : {}),
         }
       })
@@ -240,7 +245,7 @@ const Profile = () => {
           ...prev,
           user: revertedUser,
           leaderboard: revertedLeaderboard,
-          balance: buildBalanceFromHabits(revertedHabits, { publicOnly: usePublicOnlyBalance }),
+          balance: mergeBalanceWithLiveHabits(prev?.balance, revertedHabits, revertedHabits, { publicOnly: usePublicOnlyBalance }),
         }
       })
     } finally {
@@ -669,6 +674,28 @@ const Profile = () => {
                         checked={settings?.notification_quests ?? false}
                         onChange={handleSettingChange('notification_quests')}
                         disabled={!settings || isSettingsSaving}
+                      />
+                      <span className="profile__toggle-slider" aria-hidden="true"></span>
+                    </label>
+                  </div>
+                </div>
+              </section>
+
+              <section className="profile__settings-section">
+                <div className="profile__settings-section-title">Внешний вид</div>
+                <div className="profile__settings-card">
+                  <div className="profile__settings-row">
+                    <div className="profile__settings-icon">
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3A7 7 0 0 0 21 12.79Z" fill="#040415"/>
+                      </svg>
+                    </div>
+                    <div className="profile__settings-text">Тёмная тема</div>
+                    <label className="profile__toggle">
+                      <input
+                        type="checkbox"
+                        checked={isDark}
+                        onChange={toggleTheme}
                       />
                       <span className="profile__toggle-slider" aria-hidden="true"></span>
                     </label>

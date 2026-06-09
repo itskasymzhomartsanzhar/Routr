@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAppData } from '../../../contexts/AppDataContext.jsx'
 import ENDPOINTS from '../../../utils/endpoints.js'
 import { request } from '../../../utils/api.js'
-import { buildBalanceFromHabits } from '../../../utils/balance.js'
+import { mergeBalanceWithLiveHabits } from '../../../utils/balance.js'
 import { openTelegramShare } from '../../../utils/telegram.js'
 import './PublicHabitModal.scss'
 
@@ -115,7 +115,7 @@ const PublicHabitModal = ({ isOpen, onClose, habit, author, onCopied }) => {
         return {
           ...prev,
           habits: nextHabits,
-          balance: buildBalanceFromHabits(nextHabits, { publicOnly: usePublicOnlyBalance }),
+          balance: mergeBalanceWithLiveHabits(prev?.balance, prevHabits, nextHabits, { publicOnly: usePublicOnlyBalance }),
         }
       })
       setCopyStatus({ type: 'success', message: 'Привычка успешно скопирована' })

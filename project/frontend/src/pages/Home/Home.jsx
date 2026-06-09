@@ -11,7 +11,7 @@ import { useAuth } from '../../contexts/AuthContext.jsx'
 import { useAppData } from '../../contexts/AppDataContext.jsx'
 import ENDPOINTS from '../../utils/endpoints.js'
 import { api, request } from '../../utils/api.js'
-import { buildBalanceFromHabits } from '../../utils/balance.js'
+import { mergeBalanceWithLiveHabits } from '../../utils/balance.js'
 import { resolveAvatarUrl } from '../../utils/avatar.js'
 import { preloadProductImagesInBackground } from '../../utils/imagePreload.js'
 import './Home.scss'
@@ -132,7 +132,7 @@ const Home = () => {
       return {
         ...prev,
         habits: nextHabits,
-        balance: buildBalanceFromHabits(nextHabits, { publicOnly: usePublicOnlyBalance })
+        balance: mergeBalanceWithLiveHabits(prev?.balance, prevHabits, nextHabits, { publicOnly: usePublicOnlyBalance })
       }
     })
   }

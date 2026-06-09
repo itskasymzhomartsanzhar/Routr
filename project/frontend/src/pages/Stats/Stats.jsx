@@ -149,8 +149,11 @@ const Stats = () => {
           const mappedOwnItems = ownItems.map((item) => ({ label: item.label, value: item.value }))
           setProfileBalanceData(assignUniqueColors(mappedOwnItems))
         } else {
-          const publicBalance = buildBalanceFromHabits(items, { publicOnly: true })
-          setProfileBalanceData(assignUniqueColors(publicBalance.items))
+          const remoteItems = selectedUser?.balance?.items
+          const publicBalance = Array.isArray(remoteItems) && remoteItems.length
+            ? remoteItems
+            : buildBalanceFromHabits(items, { publicOnly: true }).items
+          setProfileBalanceData(assignUniqueColors(publicBalance))
         }
       } catch (error) {
         setProfileHabits([])
@@ -158,7 +161,7 @@ const Stats = () => {
       }
     }
     loadPublicHabits()
-  }, [bootstrap?.balance?.items, bootstrap?.user?.id, isProfileOpen, selectedUser?.id])
+  }, [bootstrap?.balance?.items, bootstrap?.user?.id, isProfileOpen, selectedUser?.balance, selectedUser?.id])
 
   useEffect(() => {
     if (!isProfileOpen || !selectedUser?.id) return
@@ -177,6 +180,7 @@ const Stats = () => {
             xp: Number(data.xp ?? prev.xp ?? 0),
             title: data.title || prev.title || '',
             is_premium: Boolean(data.is_premium),
+            balance: data.balance,
           }
         })
       } catch (error) {
@@ -408,6 +412,7 @@ const Stats = () => {
             xp: data.xp,
             title: data.title,
             is_premium: Boolean(data.is_premium),
+            balance: data.balance,
           })
           setIsProfileOpen(true)
         } catch (error) {

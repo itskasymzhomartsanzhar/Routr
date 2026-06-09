@@ -40,6 +40,7 @@ from .models import (
     Quest,
     Title,
     User,
+    UserBalanceCategory,
     UserQuest,
     XpIntervalTransaction,
 )
@@ -1431,6 +1432,7 @@ def get_public_user_profile(request, user_id: int):
         "xp": int(user.xp or 0),
         "title": title.name if title else "",
         "is_premium": _is_premium_active(user),
+        "balance": _serialize_balance(user, public_only=True),
     })
 
 
@@ -1595,7 +1597,17 @@ def _serialize_balance(user: User, *, public_only: bool | None = None) -> dict:
     habits = Habit.objects.filter(owner=user).select_related("category")
     if public_only:
         habits = habits.filter(visibility="Публичный")
-    category_map = {habit.category.name: 0 for habit in habits if habit.category and habit.category.name}
+    category_map: dict[str, int] = {}
+    archived_totals = UserBalanceCategory.objects.filter(user=user)
+    for row in archived_totals:
+        value = int(row.public_total or 0)
+        if not public_only:
+            value += int(row.private_total or 0)
+        if value > 0:
+            category_map[row.category_name] = category_map.get(row.category_name, 0) + value
+    for habit in habits:
+        if habit.category and habit.category.name:
+            category_map.setdefault(habit.category.name, 0)
     if not category_map:
         return {"total": 0, "items": []}
     completions = HabitCompletion.objects.filter(
@@ -1609,7 +1621,7 @@ def _serialize_balance(user: User, *, public_only: bool | None = None) -> dict:
         name = item["habit__category__name"]
         if not name:
             continue
-        category_map[name] = item["total"]
+        category_map[name] = category_map.get(name, 0) + int(item["total"] or 0)
     items = [{"label": name, "value": value} for name, value in category_map.items()]
     total = sum(item["value"] for item in items)
     return {"total": total, "items": items}

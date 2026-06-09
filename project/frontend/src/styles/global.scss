@@ -4,6 +4,18 @@
   font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', sans-serif;
   color: #0f1f35;
   background-color: #fff;
+  --routr-bg: #ffffff;
+  --routr-bg-soft: #f6f7fb;
+  --routr-card: #ffffff;
+  --routr-card-strong: #ffffff;
+  --routr-border: #EAECF0;
+  --routr-border-strong: #CDCDD0;
+  --routr-text: #0f1f35;
+  --routr-text-soft: #6B7280;
+  --routr-text-muted: #8B93A7;
+  --routr-accent: #3843FF;
+  --routr-accent-soft: #EEF2FF;
+  --routr-shadow: rgba(15, 31, 53, 0.08);
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -30,7 +42,9 @@
 body {
   margin: 0;
   color: inherit;
+  background: var(--routr-bg);
   overflow-y: auto;
+  transition: background 0.2s ease, color 0.2s ease;
 }
 
 #root {
@@ -44,4 +58,308 @@ a {
 
 button {
   font: inherit;
+}
+
+body[data-theme='dark'] {
+  --routr-bg: #0b0f14;
+  --routr-bg-soft: #10151c;
+  --routr-card: rgba(19, 23, 30, 0.92);
+  --routr-card-strong: #171c24;
+  --routr-border: rgba(255, 255, 255, 0.11);
+  --routr-border-strong: rgba(255, 255, 255, 0.18);
+  --routr-text: #f4f6fb;
+  --routr-text-soft: #a5adba;
+  --routr-text-muted: #777f8d;
+  --routr-accent: #3f49ff;
+  --routr-accent-soft: rgba(63, 73, 255, 0.16);
+  --routr-shadow: rgba(0, 0, 0, 0.34);
+  color: var(--routr-text);
+  background:
+    radial-gradient(circle at 18% 10%, rgba(84, 91, 255, 0.12), transparent 30%),
+    linear-gradient(180deg, #10151c 0%, #0b0f14 52%, #070a0e 100%);
+}
+
+body[data-theme='dark'] #root,
+body[data-theme='dark'] :is(.home, .profile, .stats, .shop, .journal, .quests, .purchases, .preloader) {
+  color: var(--routr-text);
+}
+
+body[data-theme='dark'] :is(.home, .profile, .stats, .shop, .journal, .quests, .purchases) {
+  background: transparent;
+}
+
+body[data-theme='dark'] :is(
+  .header__title,
+  .habits-section__title,
+  .level-card__title,
+  .calendar-strip__date,
+  .habit-card__title,
+  .profile__title,
+  .profile__user-name,
+  .profile__rank-title,
+  .profile__rank-value,
+  .profile__section-title,
+  .profile__chart-score,
+  .profile__settings-title,
+  .profile__settings-text,
+  .profile__settings-section-title,
+  .profile__link-title,
+  .stats__title,
+  .stats__profile-title,
+  .stats-profile__user-name,
+  .stats-profile__user-rank,
+  .stats-profile__user-xp,
+  .stats__profile-section-title,
+  .shop__title,
+  .shop__product-title,
+  .shop__product-price,
+  .journal__title,
+  .journal__section-title,
+  .quests__title,
+  .quests__quest-title,
+  .purchases__title,
+  .purchases__item-title,
+  .add-habit-modal__title,
+  .add-habit-modal__label,
+  .add-habit-modal__name-input,
+  .add-habit-modal__dropdown-trigger,
+  .add-habit-modal__goal-input,
+  .habit-details-modal__title,
+  .habit-details-modal__habit-title,
+  .habit-details-modal__section-title,
+  .habit-details-modal__stat-value,
+  .habit-details-modal__calendar-title,
+  .habit-details-modal__period-count,
+  .public-habit-modal__title,
+  .public-habit-modal__habit-title,
+  .public-habit-modal__section-title,
+  .public-habit-modal__stat-value,
+  .onboarding__title
+) {
+  color: var(--routr-text);
+}
+
+body[data-theme='dark'] :is(
+  .level-card__level,
+  .level-card__xp,
+  .habit-card__category,
+  .calendar-strip__weekday,
+  .profile__rank-level,
+  .profile__settings-subtitle,
+  .profile__link-subtitle,
+  .stats__segment-button,
+  .stats-profile__user-level,
+  .stats__profile-habit-category,
+  .shop__subtitle,
+  .shop__product-description,
+  .journal__text,
+  .quests__quest-description,
+  .quests__quest-meta,
+  .purchases__item-meta,
+  .add-habit-modal__helper,
+  .add-habit-modal__goal-text,
+  .habit-details-modal__habit-category,
+  .habit-details-modal__stat-label,
+  .habit-details-modal__leaderboard-subtitle,
+  .habit-details-modal__period-text,
+  .habit-details-modal__legend-text,
+  .public-habit-modal__habit-category,
+  .public-habit-modal__stat-label,
+  .public-habit-modal__share-text,
+  .onboarding__text
+) {
+  color: var(--routr-text-soft);
+}
+
+body[data-theme='dark'] :is(
+  .level-card,
+  .calendar-strip__day,
+  .habit-card,
+  .habit-card__skip,
+  .menu__container,
+  .profile__card,
+  .profile__icon-button,
+  .profile__settings-card,
+  .profile__link-card,
+  .stats__segment,
+  .stats__list-card,
+  .stats__profile-card,
+  .stats__profile-habit,
+  .stats-profile__card,
+  .shop__premium-card,
+  .shop__segment,
+  .shop__product-card,
+  .shop__status,
+  .journal__card,
+  .journal__input,
+  .quests__group-tab,
+  .quests__quest-card,
+  .quests__title-card,
+  .purchases__summary,
+  .purchases__item,
+  .add-habit-modal,
+  .add-habit-modal__icon-selector,
+  .add-habit-modal__dropdown-trigger,
+  .add-habit-modal__dropdown-menu,
+  .add-habit-modal__goal,
+  .add-habit-modal__visibility-toggle,
+  .add-habit-modal__date-button,
+  .add-habit-modal__notice,
+  .habit-details-modal,
+  .habit-details-modal__card,
+  .habit-details-modal__user-card,
+  .habit-details-modal__user-dropdown,
+  .habit-details-modal__stat-card,
+  .habit-details-modal__leaderboard,
+  .habit-details-modal__legend,
+  .habit-details-modal__period-result,
+  .habit-details-modal__period-input,
+  .habit-details-modal__period-row,
+  .habit-details-modal__share-popup,
+  .public-habit-modal__modal,
+  .public-habit-modal__card,
+  .public-habit-modal__stat-card,
+  .public-habit-modal__author-card,
+  .public-habit-modal__share-popup,
+  .onboarding__card,
+  .preloader__brand
+) {
+  background: var(--routr-card);
+  border-color: var(--routr-border);
+  box-shadow: 0 14px 34px var(--routr-shadow);
+  backdrop-filter: blur(18px);
+}
+
+body[data-theme='dark'] :is(
+  .profile__settings-divider,
+  .habit-details-modal__user-option + .habit-details-modal__user-option,
+  .public-habit-modal__card-row,
+  .habit-details-modal__card-row
+) {
+  border-color: var(--routr-border);
+}
+
+body[data-theme='dark'] :is(.calendar-strip__day--active, .floating-action, .add-habit-modal__submit, .public-habit-modal__primary, .habit-details-modal__share-primary, .onboarding__primary) {
+  background: linear-gradient(145deg, #3f49ff 0%, #505aff 100%);
+  color: #ffffff;
+  box-shadow: 0 14px 34px rgba(63, 73, 255, 0.36);
+}
+
+body[data-theme='dark'] .calendar-strip__day:not(.calendar-strip__day--active) {
+  background: rgba(18, 23, 30, 0.78);
+}
+
+body[data-theme='dark'] .habit-card__progress-bg,
+body[data-theme='dark'] .level-card__progress-bar,
+body[data-theme='dark'] .stats-profile__progress,
+body[data-theme='dark'] .profile__rank-progress {
+  background: rgba(255, 255, 255, 0.1);
+  stroke: rgba(255, 255, 255, 0.14);
+}
+
+body[data-theme='dark'] :is(.level-card__progress-fill, .stats-profile__progress-fill, .profile__rank-progress-fill, .journal__progress-fill, .quests__progress-fill) {
+  background: var(--routr-accent);
+}
+
+body[data-theme='dark'] :is(.habit-card__progress-fill, .habit-details-modal__calendar-dot--completed) {
+  stroke: var(--routr-accent);
+  background: var(--routr-accent);
+}
+
+body[data-theme='dark'] .menu {
+  background: linear-gradient(180deg, transparent 0%, rgba(7, 10, 14, 0.86) 46%, rgba(7, 10, 14, 0.96) 100%);
+}
+
+body[data-theme='dark'] .menu__item {
+  color: #808796;
+}
+
+body[data-theme='dark'] .menu__item--active {
+  color: var(--routr-accent);
+}
+
+body[data-theme='dark'] :is(.stats__segment-indicator, .shop__segment-indicator, .add-habit-modal__visibility-indicator) {
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 0 0 1px var(--routr-border);
+}
+
+body[data-theme='dark'] :is(.stats__segment-button--active, .shop__segment-button--active, .add-habit-modal__visibility-option--active) {
+  color: #ffffff;
+}
+
+body[data-theme='dark'] :is(.profile__toggle-slider, .add-habit-modal__toggle-slider) {
+  background: #343a45;
+}
+
+body[data-theme='dark'] :is(.profile__toggle input:checked + .profile__toggle-slider, .add-habit-modal__toggle input:checked + .add-habit-modal__toggle-slider) {
+  background: #35a63a;
+}
+
+body[data-theme='dark'] :is(input, textarea, select) {
+  color: var(--routr-text);
+  background-color: rgba(255, 255, 255, 0.06);
+  border-color: var(--routr-border);
+  color-scheme: dark;
+}
+
+body[data-theme='dark'] :is(.habit-details-overlay, .public-habit-modal__overlay, .add-habit-modal__overlay, .profile__settings-overlay, .habit-details-modal__share-overlay, .public-habit-modal__share-overlay, .onboarding__overlay) {
+  background: rgba(3, 5, 8, 0.72);
+  backdrop-filter: blur(8px);
+}
+
+body[data-theme='dark'] :is(.habit-details-modal__calendar-day--today .habit-details-modal__calendar-number, .habit-details-modal__legend-today) {
+  background: #02050a;
+  color: #ffffff;
+}
+
+body[data-theme='dark'] .habit-details-modal__calendar-day--empty .habit-details-modal__calendar-number {
+  background: rgba(255, 255, 255, 0.08);
+  color: #7c8493;
+}
+
+body[data-theme='dark'] .habit-details-modal__calendar-day--active .habit-details-modal__calendar-number {
+  background: var(--routr-accent);
+  color: #ffffff;
+}
+
+body[data-theme='dark'] :is(.habit-details-modal__calendar-dot--empty, .habit-details-modal__legend-dot--empty) {
+  background: rgba(255, 255, 255, 0.13);
+}
+
+body[data-theme='dark'] :is(.habit-details-modal__calendar-dot--scheduled, .habit-details-modal__legend-dot--scheduled) {
+  background: rgba(63, 73, 255, 0.18);
+}
+
+body[data-theme='dark'] :is(.profile__settings-icon, .profile__settings-icon--muted, .habit-details-modal__icon-button, .public-habit-modal__icon-button, .add-habit-modal__close) {
+  color: var(--routr-text);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+body[data-theme='dark'] :is(svg path[fill="#040415"], svg path[fill="#0F1F35"], svg path[fill="#0f1f35"], svg path[fill="black"]) {
+  fill: var(--routr-text);
+}
+
+body[data-theme='dark'] :is(svg path[fill="#CDCDD0"], svg path[fill="#8B93A7"], svg path[fill="#9B9BA1"]) {
+  fill: var(--routr-text-muted);
+}
+
+body[data-theme='dark'] :is(svg path[stroke="#040415"], svg path[stroke="#0F1F35"], svg path[stroke="#0f1f35"], svg path[stroke="#8B93A7"]) {
+  stroke: var(--routr-text);
+}
+
+body[data-theme='dark'] :is(.shop__product-button, .journal__button, .quests__quest-badge, .profile__user-badge, .stats-profile__user-badge) {
+  background: linear-gradient(90deg, #3f49ff 0%, #7178ff 100%);
+  color: #ffffff;
+}
+
+body[data-theme='dark'] :is(.shop__status--success, .purchases__status--paid) {
+  background: rgba(35, 169, 81, 0.14);
+  border-color: rgba(35, 169, 81, 0.28);
+  color: #67d980;
+}
+
+body[data-theme='dark'] :is(.shop__status--error, .purchases__status--failed) {
+  background: rgba(239, 68, 68, 0.14);
+  border-color: rgba(239, 68, 68, 0.28);
+  color: #ff8a8a;
 }
