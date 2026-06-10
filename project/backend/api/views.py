@@ -2433,6 +2433,14 @@ class HabitViewSet(viewsets.ModelViewSet):
                 Habit.objects.filter(pk=source_id, copied_count__gt=0).update(copied_count=F("copied_count") - 1)
             transaction.on_commit(_invalidate_reminder_index)
 
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        self.perform_destroy(instance)
+        return Response({
+            "detail": "Habit deleted",
+            "balance": _serialize_balance(request.user),
+        }, status=status.HTTP_200_OK)
+
     @action(detail=True, methods=["post"], url_path="complete")
     def complete(self, request, pk=None):
         habit = self.get_object()

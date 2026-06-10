@@ -451,7 +451,8 @@ def preserve_balance_on_habit_delete(sender, instance, **kwargs):
     category_name = instance.category.name if instance.category_id and instance.category else ""
     if not category_name:
         return
-    total = HabitCompletion.objects.filter(habit=instance, count__gte=instance.goal).count()
+    goal = max(int(instance.goal or 1), 1)
+    total = HabitCompletion.objects.filter(habit_id=instance.pk, count__gte=goal).count()
     if total <= 0:
         return
     balance, _created = UserBalanceCategory.objects.get_or_create(

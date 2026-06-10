@@ -124,15 +124,19 @@ const Home = () => {
     return parsed
   }
 
-  const updateBootstrapHabits = (updater) => {
+  const updateBootstrapHabits = (updater, options = {}) => {
     setBootstrapData((prev) => {
       const prevHabits = Array.isArray(prev.habits) ? prev.habits : []
       const nextHabits = updater(prevHabits)
       const usePublicOnlyBalance = Boolean(prev?.user?.balance_wheel)
+      const nextBalance = options.balanceOverride
+        ?? (options.preserveBalance
+          ? prev?.balance
+          : mergeBalanceWithLiveHabits(prev?.balance, prevHabits, nextHabits, { publicOnly: usePublicOnlyBalance }))
       return {
         ...prev,
         habits: nextHabits,
-        balance: mergeBalanceWithLiveHabits(prev?.balance, prevHabits, nextHabits, { publicOnly: usePublicOnlyBalance })
+        balance: nextBalance ?? mergeBalanceWithLiveHabits(prev?.balance, prevHabits, nextHabits, { publicOnly: usePublicOnlyBalance })
       }
     })
   }
@@ -211,10 +215,13 @@ const Home = () => {
   }
 
   const handleDeleteHabit = async (id) => {
-    await api.habits.delete(id)
+    const deleted = await api.habits.delete(id)
     setHabits((prev) => prev.filter((habit) => habit.id !== id))
     setAllHabits((prev) => prev.filter((habit) => habit.id !== id))
-    updateBootstrapHabits((prev) => prev.filter((habit) => habit.id !== id))
+    updateBootstrapHabits(
+      (prev) => prev.filter((habit) => habit.id !== id),
+      { balanceOverride: deleted?.balance, preserveBalance: true }
+    )
   }
 
   const handleToggleHabit = async (id) => {
@@ -281,10 +288,13 @@ const Home = () => {
   }
 
   const handleSkipHabit = async (id) => {
-    await api.habits.delete(id)
+    const deleted = await api.habits.delete(id)
     setHabits((prev) => prev.filter((habit) => habit.id !== id))
     setAllHabits((prev) => prev.filter((habit) => habit.id !== id))
-    updateBootstrapHabits((prev) => prev.filter((habit) => habit.id !== id))
+    updateBootstrapHabits(
+      (prev) => prev.filter((habit) => habit.id !== id),
+      { balanceOverride: deleted?.balance, preserveBalance: true }
+    )
   }
 
   const handleOpenCreate = () => {
