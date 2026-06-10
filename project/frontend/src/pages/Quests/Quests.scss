@@ -220,3 +220,79 @@
     font-weight: 600;
   }
 }
+
+body[data-theme='dark'] {
+  .quests {
+    background: transparent;
+
+    &__title,
+    &__section-title,
+    &__card-title,
+    &__title-name,
+    &__title-privilege,
+    &__title-privilege-value {
+      color: #f4f6fb;
+    }
+
+    &__tab,
+    &__card,
+    &__title-card {
+      background: rgba(19, 24, 32, 0.92);
+      border-color: rgba(255, 255, 255, 0.12);
+      box-shadow: 0 16px 38px rgba(0, 0, 0, 0.24);
+    }
+
+    &__tab {
+      color: #a5adba;
+    }
+
+    &__tab--active {
+      background: #4650ff;
+      border-color: #4650ff;
+      color: #ffffff;
+      box-shadow: 0 12px 28px rgba(70, 80, 255, 0.28);
+    }
+
+    &__card--completed {
+      border-color: rgba(56, 211, 111, 0.42);
+      box-shadow: 0 16px 34px rgba(56, 211, 111, 0.1);
+    }
+
+    &__title-card--current {
+      border-color: rgba(70, 80, 255, 0.72);
+      box-shadow: 0 16px 38px rgba(70, 80, 255, 0.16);
+    }
+
+    &__card-desc,
+    &__progress-meta,
+    &__card-footer,
+    &__empty,
+    &__title-levels,
+    &__title-privilege-label {
+      color: #9ba4b3;
+    }
+
+    &__card-xp,
+    &__badge {
+      background: rgba(70, 80, 255, 0.16);
+      color: #cfd4ff;
+    }
+
+    &__badge--locked {
+      background: rgba(217, 119, 6, 0.18);
+      color: #fbbf24;
+    }
+
+    &__progress-track {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    &__progress-fill {
+      background: #4650ff;
+    }
+
+    &__card-status {
+      color: #38d36f;
+    }
+  }
+}

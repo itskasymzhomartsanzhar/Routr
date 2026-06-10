@@ -620,3 +620,125 @@
     color: #8B93A7;
   }
 }
+
+body[data-theme='dark'] {
+  .stats {
+    background: transparent;
+
+    &__title,
+    &__name,
+    &__list-name,
+    &__list-rank,
+    &__profile-title,
+    &__profile-section-title,
+    &__profile-chart-score,
+    &__profile-legend-item,
+    &__profile-legend-value,
+    &__profile-habit-title,
+    .stats-profile__user-name,
+    .stats-profile__user-rank {
+      color: #f4f6fb;
+    }
+
+    &__tabs,
+    &__podium-card,
+    &__list,
+    &__list-item,
+    &__list-rank,
+    &__profile-modal,
+    &__profile-back,
+    .stats-profile__card,
+    &__profile-habit-card,
+    &__profile-habit-icon {
+      background: rgba(19, 24, 32, 0.92);
+      border-color: rgba(255, 255, 255, 0.12);
+      box-shadow: 0 16px 38px rgba(0, 0, 0, 0.24);
+    }
+
+    &__tabs {
+      box-shadow: none;
+    }
+
+    &__tab {
+      color: #9ba4b3;
+    }
+
+    &__tab-indicator {
+      background: rgba(255, 255, 255, 0.11);
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+    }
+
+    &__tab--active {
+      color: #ffffff;
+    }
+
+    &__podium-card--me,
+    &__list-item--me {
+      background: rgba(70, 80, 255, 0.14);
+      border-color: rgba(70, 80, 255, 0.38);
+    }
+
+    &__list-item {
+      border-bottom-color: rgba(255, 255, 255, 0.08);
+    }
+
+    &__list-rank--me {
+      background: #4650ff;
+      color: #ffffff;
+    }
+
+    &__rank {
+      color: #7178ff;
+    }
+
+    &__xp-pill {
+      background: #4650ff;
+      color: #ffffff;
+    }
+
+    &__list-xp,
+    &__profile-chart-label,
+    &__profile-legend-label,
+    &__profile-habit-category,
+    .stats-profile__user-xp,
+    .stats-profile__user-level {
+      color: #9ba4b3;
+    }
+
+    &__profile-overlay {
+      background: rgba(0, 0, 0, 0.68);
+    }
+
+    &__profile-modal {
+      background:
+        radial-gradient(circle at 12% 0%, rgba(69, 78, 255, 0.14), transparent 30%),
+        #0b1017;
+      box-shadow: none;
+    }
+
+    &__profile-back path {
+      stroke: #f4f6fb;
+    }
+
+    .stats-profile__progress {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .stats-profile__progress-fill {
+      background: #4650ff;
+    }
+
+    &__profile-chart-ring {
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    &__profile-chart-ring::after {
+      background: #0b1017;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+    }
+
+    &__profile-habit-icon {
+      box-shadow: none;
+    }
+  }
+}
