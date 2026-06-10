@@ -241,3 +241,54 @@
     }
   }
 }
+
+body[data-theme='dark'] {
+  .journal {
+    background: transparent;
+
+    &__title,
+    &__section-title,
+    &__role-title,
+    &__role-description,
+    &__role-line,
+    &__role-tag,
+    &__quest-title,
+    &__quest-reward {
+      color: #f4f6fb;
+    }
+
+    &__role-card,
+    &__role-tag,
+    &__quest-card,
+    &__quest-icon,
+    &__quest-reward {
+      background: rgba(19, 24, 32, 0.92);
+      border-color: rgba(255, 255, 255, 0.12);
+      box-shadow: 0 16px 38px rgba(0, 0, 0, 0.24);
+    }
+
+    &__role-level,
+    &__role-current {
+      color: #9ba4b3;
+    }
+
+    &__role-progress,
+    &__quest-progress {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    &__role-progress-fill,
+    &__quest-progress-fill {
+      background: #4650ff;
+    }
+
+    &__role-premium {
+      background: linear-gradient(90deg, #4650ff 0%, #7178ff 100%);
+      color: #ffffff;
+    }
+
+    &__quest-reward--done {
+      color: #38d36f;
+    }
+  }
+}
