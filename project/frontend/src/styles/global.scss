@@ -319,8 +319,8 @@ body[data-theme='dark'] :is(.habit-details-overlay, .public-habit-modal__overlay
 }
 
 body[data-theme='dark'] :is(.habit-details-modal__calendar-day--today .habit-details-modal__calendar-number, .habit-details-modal__legend-today) {
-  background: #02050a;
-  color: #ffffff;
+  background: #f4f6fb;
+  color: #070a0e;
 }
 
 body[data-theme='dark'] .habit-details-modal__calendar-day--empty .habit-details-modal__calendar-number {

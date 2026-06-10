@@ -795,6 +795,8 @@ body[data-theme='dark'] {
 
   .habit-details-modal__title,
   .habit-details-modal__habit-title,
+  .habit-details-modal__card-row,
+  .habit-details-modal__card-row span,
   .habit-details-modal__section-title,
   .habit-details-modal__user-name,
   .habit-details-modal__user-option,
@@ -856,6 +858,10 @@ body[data-theme='dark'] {
   .habit-details-modal__row-icon,
   .habit-details-modal__leaderboard-count {
     color: #8790ff;
+  }
+
+  .habit-details-modal__card-row .habit-details-modal__row-icon + span {
+    color: #f4f6fb;
   }
 
   .habit-details-modal__user-option + .habit-details-modal__user-option {

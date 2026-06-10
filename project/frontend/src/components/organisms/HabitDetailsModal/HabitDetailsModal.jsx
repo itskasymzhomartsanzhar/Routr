@@ -753,7 +753,7 @@ const HabitDetailsModal = ({ isOpen, onClose, onEdit, habit, habits, statsDays =
               </div>
               <div className="habit-details-modal__legend-item">
                 <span className="habit-details-modal__legend-today">19</span>
-                <span className="habit-details-modal__legend-text">Черный кружок: сегодняшний день</span>
+                <span className="habit-details-modal__legend-text">Кружок с датой: сегодняшний день</span>
               </div>
               <div className="habit-details-modal__legend-item">
                 <span className="habit-details-modal__legend-dot habit-details-modal__legend-dot--scheduled"></span>
