@@ -780,3 +780,159 @@
   padding: 8px 12px;
   cursor: pointer;
 }
+
+body[data-theme='dark'] {
+  .habit-details-overlay,
+  .habit-details-modal__share-overlay {
+    background: rgba(0, 0, 0, 0.68);
+  }
+
+  .habit-details-modal {
+    background:
+      radial-gradient(circle at 12% 0%, rgba(70, 80, 255, 0.13), transparent 30%),
+      #0b1017;
+  }
+
+  .habit-details-modal__title,
+  .habit-details-modal__habit-title,
+  .habit-details-modal__section-title,
+  .habit-details-modal__user-name,
+  .habit-details-modal__user-option,
+  .habit-details-modal__leaderboard-title,
+  .habit-details-modal__leaderboard-name,
+  .habit-details-modal__stat-value,
+  .habit-details-modal__calendar-title,
+  .habit-details-modal__calendar-grid,
+  .habit-details-modal__calendar-number,
+  .habit-details-modal__legend-title,
+  .habit-details-modal__period-count,
+  .habit-details-modal__period-row,
+  .habit-details-modal__period-value,
+  .habit-details-modal__share-title {
+    color: #f4f6fb;
+  }
+
+  .habit-details-modal__habit-category,
+  .habit-details-modal__leaderboard-subtitle,
+  .habit-details-modal__stat-label,
+  .habit-details-modal__calendar-week,
+  .habit-details-modal__period-label,
+  .habit-details-modal__period-text,
+  .habit-details-modal__period-habit,
+  .habit-details-modal__legend-text,
+  .habit-details-modal__share-text {
+    color: #9ba4b3;
+  }
+
+  .habit-details-modal__icon-button,
+  .habit-details-modal__card,
+  .habit-details-modal__habit-icon,
+  .habit-details-modal__edit,
+  .habit-details-modal__card-row,
+  .habit-details-modal__user-card,
+  .habit-details-modal__user-dropdown,
+  .habit-details-modal__stat-card,
+  .habit-details-modal__stat-icon,
+  .habit-details-modal__leaderboard-placeholder,
+  .habit-details-modal__leaderboard-row,
+  .habit-details-modal__leaderboard-rank,
+  .habit-details-modal__legend,
+  .habit-details-modal__period-input,
+  .habit-details-modal__period-result,
+  .habit-details-modal__period-row,
+  .habit-details-modal__share-popup,
+  .habit-details-modal__share-secondary {
+    background: rgba(19, 24, 32, 0.92);
+    border-color: rgba(255, 255, 255, 0.12);
+    box-shadow: 0 16px 38px rgba(0, 0, 0, 0.24);
+  }
+
+  .habit-details-modal__icon-button path,
+  .habit-details-modal__edit path {
+    stroke: #f4f6fb;
+    fill: #f4f6fb;
+  }
+
+  .habit-details-modal__row-icon,
+  .habit-details-modal__leaderboard-count {
+    color: #8790ff;
+  }
+
+  .habit-details-modal__user-option + .habit-details-modal__user-option {
+    border-top-color: rgba(255, 255, 255, 0.1);
+  }
+
+  .habit-details-modal__leaderboard-row--me {
+    background: rgba(70, 80, 255, 0.14);
+    border-color: rgba(70, 80, 255, 0.38);
+  }
+
+  .habit-details-modal__leaderboard-rank {
+    color: #f4f6fb;
+  }
+
+  .habit-details-modal__calendar-nav {
+    color: #9ba4b3;
+  }
+
+  .habit-details-modal__calendar-day--today .habit-details-modal__calendar-number,
+  .habit-details-modal__calendar-day--today.habit-details-modal__calendar-day--created .habit-details-modal__calendar-number,
+  .habit-details-modal__calendar-day--today.habit-details-modal__calendar-day--end .habit-details-modal__calendar-number {
+    background: #f4f6fb;
+    border-color: #f4f6fb;
+    color: #070a0e;
+  }
+
+  .habit-details-modal__calendar-day--created .habit-details-modal__calendar-number {
+    border-color: #8790ff;
+    color: #cfd4ff;
+  }
+
+  .habit-details-modal__calendar-day--end .habit-details-modal__calendar-number {
+    border-color: #ff8a8a;
+    color: #ff8a8a;
+  }
+
+  .habit-details-modal__calendar-dot--empty,
+  .habit-details-modal__legend-dot--empty {
+    background: rgba(255, 255, 255, 0.18);
+  }
+
+  .habit-details-modal__calendar-dot--scheduled,
+  .habit-details-modal__legend-dot--scheduled {
+    background: rgba(135, 144, 255, 0.28);
+  }
+
+  .habit-details-modal__calendar-dot--completed,
+  .habit-details-modal__legend-dot--completed {
+    background: #5660ff;
+  }
+
+  .habit-details-modal__legend-today {
+    background: #f4f6fb;
+    color: #070a0e;
+  }
+
+  .habit-details-modal__period-input {
+    color: #f4f6fb;
+    color-scheme: dark;
+  }
+
+  .habit-details-modal__period-input:focus {
+    outline-color: rgba(86, 96, 255, 0.45);
+  }
+
+  .habit-details-modal__calendar-alert {
+    background: rgba(244, 246, 251, 0.95);
+    color: #0b1017;
+  }
+
+  .habit-details-modal__share-primary {
+    background: linear-gradient(145deg, #4650ff 0%, #5660ff 100%);
+    color: #ffffff;
+  }
+
+  .habit-details-modal__share-secondary {
+    color: #f4f6fb;
+  }
+}
