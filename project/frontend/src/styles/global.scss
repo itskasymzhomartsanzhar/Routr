@@ -47,6 +47,17 @@ body {
   transition: background 0.2s ease, color 0.2s ease;
 }
 
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+html[data-theme='dark'] {
+  background: #070a0e;
+  color-scheme: dark;
+}
+
 #root {
   width: 100%;
 }
@@ -362,4 +373,241 @@ body[data-theme='dark'] :is(.shop__status--error, .purchases__status--failed) {
   background: rgba(239, 68, 68, 0.14);
   border-color: rgba(239, 68, 68, 0.28);
   color: #ff8a8a;
+}
+
+body[data-theme='dark'] {
+  min-height: 100vh;
+}
+
+body[data-theme='dark'] #root {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 8% 3%, rgba(69, 78, 255, 0.15), transparent 34%),
+    radial-gradient(circle at 94% 76%, rgba(69, 78, 255, 0.1), transparent 26%),
+    linear-gradient(180deg, #111822 0%, #0a0f15 42%, #06090d 100%);
+}
+
+body[data-theme='dark'] :is(
+  .home,
+  .profile,
+  .stats,
+  .shop,
+  .journal,
+  .quests,
+  .purchases,
+  .preloader
+) {
+  min-height: 100vh;
+  background: transparent;
+}
+
+body[data-theme='dark'] :is(
+  .header__greeting,
+  .profile__user-rank,
+  .profile__user-xp,
+  .profile__user-level,
+  .profile__legend-item,
+  .profile__legend-label,
+  .profile__legend-value,
+  .profile__premium-cta,
+  .profile__settings-link,
+  .profile__settings-back,
+  .profile__settings-close,
+  .profile__support-title,
+  .profile__support-close,
+  .shop__purchases,
+  .shop__purchases-text,
+  .shop__card-title,
+  .shop__card-price,
+  .quests__card-title,
+  .quests__title-name,
+  .quests__title-privilege,
+  .quests__title-privilege-value,
+  .quests__card-target
+) {
+  color: #f4f6fb;
+}
+
+body[data-theme='dark'] :is(
+  .profile__legend-label,
+  .profile__user-xp,
+  .profile__user-level,
+  .shop__card-subtitle,
+  .shop__tab,
+  .shop__purchases-icon,
+  .shop__purchases-arrow,
+  .quests__card-desc,
+  .quests__card-footer,
+  .quests__progress-meta,
+  .quests__title-levels,
+  .quests__title-privilege-label,
+  .quests__empty
+) {
+  color: #9ba4b3;
+}
+
+body[data-theme='dark'] :is(
+  .header__avatar,
+  .level-card,
+  .calendar-strip__day,
+  .habit-card,
+  .habit-card__check,
+  .habit-card__icon,
+  .habit-card__skip,
+  .profile__card,
+  .profile__icon-button,
+  .profile__settings-modal,
+  .profile__settings-card,
+  .profile__settings-back,
+  .profile__settings-close,
+  .profile__support-modal,
+  .shop__purchases,
+  .shop__tabs,
+  .shop__card,
+  .shop__status,
+  .quests__tab,
+  .quests__card,
+  .quests__title-card,
+  .menu__container
+) {
+  background: rgba(19, 24, 32, 0.9);
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 16px 38px rgba(0, 0, 0, 0.26);
+}
+
+body[data-theme='dark'] .habit-card-wrapper--swiped .habit-card__skip {
+  background-color: rgba(19, 24, 32, 0.96);
+}
+
+body[data-theme='dark'] :is(.habit-card__check--completed, .habit-card__check--completed svg path) {
+  color: #38d36f;
+  stroke: #38d36f;
+}
+
+body[data-theme='dark'] :is(.calendar-strip__date, .habit-card__title, .level-card__title) {
+  color: #f4f6fb;
+}
+
+body[data-theme='dark'] :is(.calendar-strip__weekday, .habit-card__category, .level-card__level, .level-card__xp) {
+  color: #a7afbd;
+}
+
+body[data-theme='dark'] .calendar-strip__day--active {
+  background: linear-gradient(145deg, #4650ff 0%, #5660ff 100%);
+  border-color: rgba(86, 96, 255, 0.72);
+}
+
+body[data-theme='dark'] .calendar-strip__day--active :is(.calendar-strip__date, .calendar-strip__weekday) {
+  color: #ffffff;
+}
+
+body[data-theme='dark'] :is(.level-card__progress-bar, .profile__progress, .quests__progress-track) {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+body[data-theme='dark'] .profile__chart-ring {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+body[data-theme='dark'] .profile__chart-ring::after {
+  background: #0b1017;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+body[data-theme='dark'] .profile__premium {
+  background:
+    radial-gradient(circle at 16% 0%, rgba(255, 255, 255, 0.16), transparent 30%),
+    linear-gradient(135deg, #3640ff 0%, #6570ff 100%);
+  box-shadow: 0 20px 42px rgba(54, 64, 255, 0.2);
+}
+
+body[data-theme='dark'] .profile__premium-cta {
+  background: rgba(255, 255, 255, 0.92);
+  color: #111827;
+}
+
+body[data-theme='dark'] .profile__premium-cta--secondary {
+  background: rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+}
+
+body[data-theme='dark'] .profile__settings-overlay {
+  background: rgba(0, 0, 0, 0.64);
+}
+
+body[data-theme='dark'] .profile__settings-modal {
+  background:
+    radial-gradient(circle at 12% 0%, rgba(69, 78, 255, 0.14), transparent 30%),
+    #0b1017;
+}
+
+body[data-theme='dark'] .profile__settings-divider {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+body[data-theme='dark'] .profile__support-overlay {
+  background: rgba(0, 0, 0, 0.68);
+}
+
+body[data-theme='dark'] .profile__support-email {
+  color: #cfd4ff;
+  background: rgba(69, 78, 255, 0.14);
+}
+
+body[data-theme='dark'] .shop__tab-indicator {
+  background: rgba(255, 255, 255, 0.11);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+body[data-theme='dark'] .shop__tab--active {
+  color: #ffffff;
+}
+
+body[data-theme='dark'] .shop__card-price {
+  background: linear-gradient(145deg, #4650ff 0%, #5660ff 100%);
+  border-color: transparent;
+}
+
+body[data-theme='dark'] .quests__tab--active {
+  background: #4650ff;
+  border-color: #4650ff;
+  color: #ffffff;
+}
+
+body[data-theme='dark'] .quests__card--completed {
+  border-color: rgba(56, 211, 111, 0.42);
+  box-shadow: 0 16px 34px rgba(56, 211, 111, 0.1);
+}
+
+body[data-theme='dark'] .quests__card-xp,
+body[data-theme='dark'] .quests__badge {
+  background: rgba(70, 80, 255, 0.16);
+  color: #cfd4ff;
+}
+
+body[data-theme='dark'] .quests__badge--locked {
+  background: rgba(217, 119, 6, 0.18);
+  color: #fbbf24;
+}
+
+body[data-theme='dark'] .quests__card-status {
+  color: #38d36f;
+}
+
+body[data-theme='dark'] .menu {
+  background: linear-gradient(180deg, transparent 0%, rgba(6, 9, 13, 0.78) 36%, rgba(6, 9, 13, 0.98) 100%);
+}
+
+body[data-theme='dark'] .menu__container {
+  background: rgba(17, 23, 31, 0.96);
+  border-color: rgba(255, 255, 255, 0.14);
+  box-shadow: 0 18px 46px rgba(0, 0, 0, 0.38);
+}
+
+body[data-theme='dark'] .menu__item {
+  color: #8f98a8;
+}
+
+body[data-theme='dark'] .menu__item--active {
+  color: #4c55ff;
 }
