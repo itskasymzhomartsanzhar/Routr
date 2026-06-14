@@ -72,6 +72,7 @@ const Purchases = () => {
             date: formatDate(item?.purchased_at || item?.paid_at || item?.created_at),
             image: forceHttps(normalizeMediaUrl(product?.image) || placeholderImage),
             status: item?.status || 'paid',
+            isPremium: Boolean(product?.is_premium),
           }
         }),
     [items]
@@ -104,8 +105,12 @@ const Purchases = () => {
           <div className="purchases__grid">
             {normalizedItems.map((item) => (
               <div className="purchases__card" key={item.id}>
-                <div className="purchases__card-icon">
-                  <img src={item.image} alt="" />
+                <div className={`purchases__card-icon${item.isPremium ? ' purchases__card-icon--premium' : ''}`}>
+                  {item.isPremium ? (
+                    <span className="profile__user-badge">Premium</span>
+                  ) : (
+                    <img src={item.image} alt="" />
+                  )}
                 </div>
                 <div className="purchases__card-title">{item.title}</div>
                 {item.subtitle && <div className="purchases__card-subtitle">{item.subtitle}</div>}

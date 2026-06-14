@@ -633,7 +633,7 @@
 
   &__toggle {
     position: relative;
-    width: 51px;
+    width: 62px;
     height: 44px;
     display: inline-flex;
     align-items: center;
@@ -658,7 +658,7 @@
     top: 50%;
     left: 0;
     right: 0;
-    height: 31px;
+    height: 32px;
     transform: translateY(-50%);
     background: #E9E9EB;
     border-radius: 999px;
@@ -668,8 +668,8 @@
     &::before {
       content: '';
       position: absolute;
-      height: 27px;
-      width: 27px;
+      height: 28px;
+      width: 28px;
       left: 2px;
       top: 2px;
       background: #FFFFFF;
@@ -686,7 +686,7 @@
   }
 
   &__toggle input:checked + &__toggle-slider::before {
-    transform: translateX(20px);
+    transform: translateX(30px);
   }
 
   &__toggle input:focus-visible + &__toggle-slider {
@@ -699,7 +699,7 @@
   }
 
   &__toggle input:checked:active + &__toggle-slider::before {
-    transform: translateX(20px) scale(0.94);
+    transform: translateX(30px) scale(0.94);
   }
 
   &__toggle input:disabled {

@@ -92,6 +92,23 @@
     object-fit: contain;
   }
 
+  &__card-icon--premium {
+    width: 100%;
+    height: 84px;
+  }
+
+  .profile__user-badge {
+    padding: 6px 8px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 500;
+    line-height: 1;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #FFFFFF;
+    background: linear-gradient(90deg, #3843FF 0%, #868CF4 100%);
+  }
+
   &__card-title {
     font-size: 14px;
     font-weight: 500;
