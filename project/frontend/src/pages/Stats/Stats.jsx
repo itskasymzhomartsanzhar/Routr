@@ -3,10 +3,10 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import Header from '../../components/organisms/Header/Header.jsx'
 import BottomNav from '../../components/organisms/Menu/Menu.jsx'
 import PublicHabitModal from '../../components/organisms/PublicHabitModal/PublicHabitModal.jsx'
-import placeholderAvatar from '../../assets/placeholder.png'
 import { request } from '../../utils/api.js'
 import ENDPOINTS from '../../utils/endpoints.js'
 import { buildBalanceFromHabits } from '../../utils/balance.js'
+import { createAvatarPlaceholder } from '../../utils/avatar.js'
 import { useAppData } from '../../contexts/AppDataContext.jsx'
 import './Stats.scss'
 
@@ -175,7 +175,7 @@ const Stats = () => {
           return {
             ...prev,
             name: data.name,
-            avatar: data.avatar || prev.avatar || placeholderAvatar,
+            avatar: data.avatar || prev.avatar || createAvatarPlaceholder(data.name || prev.name),
             level: Number(data.level ?? prev.level ?? 1),
             xp: Number(data.xp ?? prev.xp ?? 0),
             title: data.title || prev.title || '',
@@ -320,7 +320,7 @@ const Stats = () => {
   const currentUser = effectiveLeaderboard.me
     ? {
       ...effectiveLeaderboard.me,
-      avatar: effectiveLeaderboard.me.avatar || placeholderAvatar,
+      avatar: effectiveLeaderboard.me.avatar || createAvatarPlaceholder(effectiveLeaderboard.me.name),
       is_premium: Boolean(effectiveLeaderboard.me?.is_premium)
     }
     : null
@@ -331,7 +331,7 @@ const Stats = () => {
     }))
     const base = effectiveLeaderboard.items.map((item) => ({
       ...item,
-      avatar: item.avatar || placeholderAvatar,
+      avatar: item.avatar || createAvatarPlaceholder(item.name),
       is_premium: Boolean(item?.is_premium)
     }))
     if (!currentUser || typeof currentUser.rank !== 'number' || currentUser.rank < 1 || currentUser.rank > LEADERBOARD_LIMIT) {
@@ -347,7 +347,7 @@ const Stats = () => {
   const topUsers = displayItems.slice(0, 3).map((user, index) => ({
     ...user,
     rank: user.rank ?? index + 1,
-    avatar: user.avatar || placeholderAvatar,
+    avatar: user.avatar || createAvatarPlaceholder(user.name),
     is_premium: Boolean(user?.is_premium)
   }))
   const podiumUsers = [0, 1, 2].map((index) => {
@@ -358,7 +358,7 @@ const Stats = () => {
       name: '—',
       rank: index + 1,
       xp: 0,
-      avatar: placeholderAvatar,
+      avatar: createAvatarPlaceholder('?'),
       is_premium: false
     }
   })
@@ -367,7 +367,7 @@ const Stats = () => {
   const thirdUser = podiumUsers[2]
   const listUsers = displayItems.slice(3).map((user) => ({
     ...user,
-    avatar: user.avatar || placeholderAvatar,
+    avatar: user.avatar || createAvatarPlaceholder(user.name),
     is_premium: Boolean(user?.is_premium)
   }))
   const isCurrentUserInTopList = Boolean(
@@ -407,7 +407,7 @@ const Stats = () => {
           setSelectedUser({
             id: data.id,
             name: data.name,
-            avatar: data.avatar || placeholderAvatar,
+            avatar: data.avatar || createAvatarPlaceholder(data.name),
             level: data.level,
             xp: data.xp,
             title: data.title,
@@ -602,7 +602,7 @@ const Stats = () => {
                   <div className="stats-profile__card-main">
                     <div
                       className={`stats-profile__avatar ${selectedUser?.is_premium ? 'stats-profile__avatar--premium' : ''}`}
-                      style={{ backgroundImage: `url(${selectedUser?.avatar || placeholderAvatar})` }}
+                      style={{ backgroundImage: `url(${selectedUser?.avatar || createAvatarPlaceholder(selectedUser?.name)})` }}
                     ></div>
                     <div className="stats-profile__user-meta">
                       <div className="stats-profile__user-name">{selectedUser?.name || 'Пользователь'}</div>

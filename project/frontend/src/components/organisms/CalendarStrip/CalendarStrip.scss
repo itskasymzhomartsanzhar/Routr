@@ -11,6 +11,8 @@
   padding-left: 20px;
   padding-right: 60px;
   width: calc(100% + 40px);
+  scroll-snap-type: x proximity;
+  overscroll-behavior-x: contain;
 
   &::-webkit-scrollbar {
     display: none;
@@ -31,6 +33,7 @@
     cursor: pointer;
     flex-shrink: 0;
     transition: all 0.2s ease;
+    scroll-snap-align: center;
 
     &--active {
       background: #3843FF;

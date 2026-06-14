@@ -1,5 +1,3 @@
-import placeholderAvatar from '../assets/placeholder.png'
-
 const LOCAL_HTTP_RE = /^http:\/\/(localhost|127\.0\.0\.1)(?::\d+)?\//i
 const ABSOLUTE_URL_RE = /^https?:\/\//i
 const SPECIAL_URL_RE = /^(data:image\/|blob:)/i
@@ -34,7 +32,21 @@ export const normalizeAvatarUrl = (value) => {
   }
 }
 
-export const resolveAvatarUrl = (value, fallback = placeholderAvatar) => {
-  return normalizeAvatarUrl(value) || fallback
+export const createAvatarPlaceholder = (name = '') => {
+  const initial = (String(name || '?').trim().charAt(0).toUpperCase() || '?')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+      <rect width="128" height="128" rx="64" fill="#3843FF"/>
+      <text x="64" y="68" text-anchor="middle" dominant-baseline="middle"
+        fill="#FFFFFF" font-family="Arial, sans-serif" font-size="56" font-weight="600">${initial}</text>
+    </svg>
+  `
+  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`
 }
 
+export const resolveAvatarUrl = (value, fallback = '') => {
+  return normalizeAvatarUrl(value) || fallback
+}

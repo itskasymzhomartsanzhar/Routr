@@ -63,7 +63,6 @@ const Purchases = () => {
   const normalizedItems = useMemo(
     () =>
       (items || [])
-        .filter((item) => !(item?.product?.is_premium))
         .map((item) => {
           const product = item?.product || {}
           return {
@@ -88,7 +87,7 @@ const Purchases = () => {
                 fillRule="evenodd"
                 clipRule="evenodd"
                 d="M5.82452 9.95961C6.05778 10.1969 6.0586 10.5824 5.82633 10.8207C5.61519 11.0374 5.28411 11.0577 5.0504 10.8814L4.98343 10.8226L0.17548 5.93189C-0.0372109 5.71554 -0.0565591 5.37609 0.117444 5.13734L0.175446 5.06896L4.98339 0.177452C5.21664 -0.0598453 5.59402 -0.0590471 5.8263 0.179235C6.03746 0.395856 6.05601 0.734172 5.8824 0.972179L5.82455 1.04035L1.44095 5.50065L5.82452 9.95961Z"
-                fill="#040415"
+                fill="currentColor"
               />
             </svg>
           </button>

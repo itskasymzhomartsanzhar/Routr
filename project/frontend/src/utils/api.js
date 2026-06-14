@@ -50,7 +50,7 @@ const MOCK_USER = {
   username: "dev_user",
   first_name: "Dev",
   last_name: "User",
-  photo_url: "https://via.placeholder.com/150",
+  photo_url: "",
   timezone_name: "UTC",
   is_premium: true,
 };

@@ -1313,9 +1313,11 @@ def telegram_auth(request):
             extra_fields = {
                 "first_name": user_data.get('first_name', ''),
                 "username": user_data.get('username', ''),
-                "photo_url": user_data.get('photo_url', ''),
                 "is_active": True,
             }
+            photo_url = (user_data.get('photo_url') or '').strip()
+            if photo_url:
+                extra_fields["photo_url"] = photo_url
             if client_timezone_name:
                 extra_fields["timezone_name"] = client_timezone_name
 
@@ -1358,9 +1360,11 @@ def telegram_auth(request):
         extra_fields = {
             "first_name": user_data.get('first_name', ''),
             "username": user_data.get('username', ''),
-            "photo_url": user_data.get('avatar_url', ''),
             "is_active": True,
         }
+        photo_url = (user_data.get('avatar_url') or '').strip()
+        if photo_url:
+            extra_fields["photo_url"] = photo_url
         if client_timezone_name:
             extra_fields["timezone_name"] = client_timezone_name
 

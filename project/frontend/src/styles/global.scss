@@ -303,7 +303,7 @@ body[data-theme='dark'] :is(.profile__toggle-slider, .add-habit-modal__toggle-sl
 }
 
 body[data-theme='dark'] :is(.profile__toggle input:checked + .profile__toggle-slider, .add-habit-modal__toggle input:checked + .add-habit-modal__toggle-slider) {
-  background: #35a63a;
+  background: var(--routr-accent);
 }
 
 body[data-theme='dark'] :is(input, textarea, select) {

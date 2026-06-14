@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import placeholderAvatar from '../../../assets/placeholder.png'
 import ENDPOINTS from '../../../utils/endpoints.js'
 import { request } from '../../../utils/api.js'
+import { createAvatarPlaceholder } from '../../../utils/avatar.js'
 import { openTelegramShare } from '../../../utils/telegram.js'
 import { lockBodyScroll, unlockBodyScroll } from '../../../utils/bodyScrollLock.js'
 import './HabitDetailsModal.scss'
@@ -263,7 +263,7 @@ const HabitDetailsModal = ({ isOpen, onClose, onEdit, habit, habits, statsDays =
   const users = participants
   const selectedUser = users.find((user) => user.id === selectedUserId) ?? users[0] ?? null
   const selectedUserName = selectedUser?.name || 'Вы'
-  const selectedUserAvatar = selectedUser?.avatar || placeholderAvatar
+  const selectedUserAvatar = selectedUser?.avatar || createAvatarPlaceholder(selectedUserName)
 
   const handleUserToggle = () => {
     setIsUserDropdownOpen((prev) => !prev)
@@ -655,7 +655,7 @@ const HabitDetailsModal = ({ isOpen, onClose, onEdit, habit, habits, statsDays =
                       className={`habit-details-modal__leaderboard-avatar ${
                         item.is_premium ? 'habit-details-modal__leaderboard-avatar--premium' : ''
                       }`}
-                      style={{ backgroundImage: `url(${item.avatar || placeholderAvatar})` }}
+                      style={{ backgroundImage: `url(${item.avatar || createAvatarPlaceholder(item.name)})` }}
                     ></div>
                     <div className="habit-details-modal__leaderboard-name">{item.name}</div>
                     <div className="habit-details-modal__leaderboard-count">{item.completed} раз</div>

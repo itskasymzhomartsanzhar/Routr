@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import './Header.scss'
-import placeholderAvatar from '../../../assets/placeholder.png'
 import { resolveAvatarUrl } from '../../../utils/avatar.js'
 
 const Header = ({ userName = 'Mikhail', avatarUrl = null }) => {
-  const safeAvatarUrl = useMemo(() => resolveAvatarUrl(avatarUrl, placeholderAvatar), [avatarUrl])
+  const safeAvatarUrl = useMemo(() => resolveAvatarUrl(avatarUrl), [avatarUrl])
   const [imageFailed, setImageFailed] = useState(false)
 
   useEffect(() => {

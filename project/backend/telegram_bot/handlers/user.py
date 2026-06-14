@@ -2,9 +2,11 @@
 import logging
 import re
 import asyncio
+from pathlib import Path
 from urllib.parse import urlencode
 from typing import Any
 
+from django.conf import settings
 from aiogram import Router
 from aiogram.types import Message, CallbackQuery
 from aiogram.filters import Command, CommandStart, CommandObject
@@ -100,7 +102,7 @@ async def _resolve_novice_title() -> Title | None:
 
 async def _upsert_user_from_telegram(telegram_user: Any, bot: Any) -> tuple[User, bool]:
     user = await User.objects.filter(telegram_id=telegram_user.id).afirst()
-    photo_url = getattr(telegram_user, "photo_url", "") or ""
+    photo_url = await _download_telegram_avatar(telegram_user, bot)
     if user:
         changed = False
         first_name = telegram_user.first_name or ''
@@ -111,7 +113,7 @@ async def _upsert_user_from_telegram(telegram_user: Any, bot: Any) -> tuple[User
         if user.username != username:
             user.username = username
             changed = True
-        if (user.photo_url or '') != photo_url:
+        if photo_url is not None and (user.photo_url or '') != photo_url:
             user.photo_url = photo_url
             changed = True
         if user.language_code != 'ru':
@@ -129,7 +131,7 @@ async def _upsert_user_from_telegram(telegram_user: Any, bot: Any) -> tuple[User
         telegram_id=telegram_user.id,
         username=telegram_user.username or '',
         first_name=telegram_user.first_name or '',
-        photo_url=photo_url,
+        photo_url=photo_url or '',
         language_code='ru',
         is_active=True,
         current_title=novice_title,
@@ -137,10 +139,7 @@ async def _upsert_user_from_telegram(telegram_user: Any, bot: Any) -> tuple[User
     return user, True
 
 
-async def _get_telegram_photo_url(telegram_user: Any, bot: Any) -> str:
-    direct = getattr(telegram_user, 'photo_url', '') or ''
-    if direct:
-        return direct
+async def _download_telegram_avatar(telegram_user: Any, bot: Any) -> str | None:
     try:
         photos = await bot.get_user_profile_photos(user_id=telegram_user.id, limit=1)
         if not photos or not photos.photos:
@@ -149,11 +148,23 @@ async def _get_telegram_photo_url(telegram_user: Any, bot: Any) -> str:
         file = await bot.get_file(best.file_id)
         file_path = getattr(file, 'file_path', '') or ''
         if not file_path:
-            return ''
-        return f"https://api.telegram.org/file/bot{bot.token}/{file_path}"
+            return None
+
+        suffix = Path(file_path).suffix.lower()
+        if suffix not in {'.jpg', '.jpeg', '.png', '.webp'}:
+            suffix = '.jpg'
+        relative_path = Path('avatars') / f'{telegram_user.id}{suffix}'
+        destination = Path(settings.MEDIA_ROOT) / relative_path
+        await asyncio.to_thread(destination.parent.mkdir, parents=True, exist_ok=True)
+        await bot.download_file(file_path, destination=destination)
+
+        media_url = str(settings.MEDIA_URL).rstrip('/')
+        version = re.sub(r'[^a-zA-Z0-9_-]', '', getattr(best, 'file_unique_id', '') or '')
+        version_suffix = f'?v={version}' if version else ''
+        return f"{media_url}/{relative_path.as_posix()}{version_suffix}"
     except Exception as exc:
         logger.warning("Failed to fetch Telegram profile photo for user=%s: %s", telegram_user.id, exc)
-        return ''
+        return None
 
 
 async def _safe_answer(message: Message, text: str, reply_markup=None, attempts: int = 2) -> bool:

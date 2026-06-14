@@ -4,7 +4,6 @@ import BottomNav from '../../components/organisms/Menu/Menu.jsx'
 import { useAuth } from '../../contexts/AuthContext.jsx'
 import { useAppData } from '../../contexts/AppDataContext.jsx'
 import { useTheme } from '../../contexts/useTheme.js'
-import placeholderAvatar from '../../assets/placeholder.png'
 import { mergeBalanceWithLiveHabits } from '../../utils/balance.js'
 import { resolveAvatarUrl } from '../../utils/avatar.js'
 import ENDPOINTS from '../../utils/endpoints.js'
@@ -25,6 +24,7 @@ const Profile = () => {
   const [balanceData, setBalanceData] = useState([])
   const [premiumStatus, setPremiumStatus] = useState({ type: null, message: '' })
   const [isPremiumPaying, setIsPremiumPaying] = useState(false)
+  const [avatarFailed, setAvatarFailed] = useState(false)
   const pendingSettingsRef = useRef({})
   const settingsSnapshotRef = useRef({})
   const settingsDebounceRef = useRef(null)
@@ -341,7 +341,7 @@ const Profile = () => {
     }, SETTINGS_DEBOUNCE_MS)
   }
 
-  const avatarUrl = resolveAvatarUrl(liveUser?.photo_url || user?.photo_url, placeholderAvatar)
+  const avatarUrl = resolveAvatarUrl(liveUser?.photo_url || user?.photo_url)
   const displayName = liveUser?.first_name || liveUser?.username || 'Пользователь'
   const isPremium = Boolean(liveUser?.premium_expiration)
   const xpValue = liveUser?.xp ?? 0
@@ -362,6 +362,10 @@ const Profile = () => {
         year: '2-digit',
       })
     : ''
+
+  useEffect(() => {
+    setAvatarFailed(false)
+  }, [avatarUrl])
   const premiumProducts = (() => {
     const products = Array.isArray(bootstrap?.products) ? bootstrap.products : []
     return products.filter((item) => {
@@ -471,17 +475,19 @@ const Profile = () => {
               <div
                 className="profile__avatar"
               >
-                <img
-                  className="profile__avatar-img"
-                  src={avatarUrl}
-                  alt={displayName}
-                  loading="lazy"
-                  onError={(event) => {
-                    if (event.currentTarget.src !== placeholderAvatar) {
-                      event.currentTarget.src = placeholderAvatar
-                    }
-                  }}
-                />
+                {avatarUrl && !avatarFailed ? (
+                  <img
+                    className="profile__avatar-img"
+                    src={avatarUrl}
+                    alt={displayName}
+                    loading="lazy"
+                    onError={() => setAvatarFailed(true)}
+                  />
+                ) : (
+                  <span className="profile__avatar-placeholder">
+                    {displayName.charAt(0).toUpperCase()}
+                  </span>
+                )}
               </div>
               <div className="profile__user-meta">
                 <div className="profile__user-name">{displayName}</div>
