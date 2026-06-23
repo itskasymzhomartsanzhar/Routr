@@ -287,6 +287,37 @@
     font-weight: 600;
   }
 
+  &__balance-habits {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-top: 2px;
+  }
+
+  &__balance-habit {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 14px;
+    line-height: 1.35;
+    color: var(--routr-text);
+  }
+
+  &__balance-habit-name {
+    min-width: 0;
+    overflow-wrap: anywhere;
+
+    span {
+      color: var(--routr-text-muted);
+    }
+  }
+
+  &__balance-habit-count {
+    flex-shrink: 0;
+    font-weight: 600;
+  }
+
   &__premium {
     background: linear-gradient(135deg, #3E46FF 0%, #6B74FF 100%);
     border-radius: 24px;

@@ -67,6 +67,20 @@ const Profile = () => {
     })
   }
   const totalBalance = balanceData.reduce((sum, item) => sum + item.value, 0)
+  const balanceHabitRows = (Array.isArray(bootstrap?.habits) ? bootstrap.habits : [])
+    .filter((habit) => !liveUser?.balance_wheel || habit?.visibility === 'Публичный')
+    .map((habit) => {
+      const category = typeof habit?.category === 'string'
+        ? habit.category
+        : habit?.category?.name
+      return {
+        id: habit?.id,
+        title: habit?.title || 'Привычка',
+        category: (category || 'Без категории').toLocaleLowerCase('ru-RU'),
+        count: Math.max(Number(habit?.total_completions ?? habit?.totalCompletions ?? 0) || 0, 0),
+      }
+    })
+    .sort((first, second) => second.count - first.count || first.title.localeCompare(second.title, 'ru'))
   const gapSize = 2
   const segmentCount = balanceData.length
   const availableAngle = 360 - gapSize * segmentCount
@@ -530,6 +544,18 @@ const Profile = () => {
               ))}
             </div>
           </div>
+          {balanceHabitRows.length > 0 && (
+            <div className="profile__balance-habits">
+              {balanceHabitRows.map((habit) => (
+                <div className="profile__balance-habit" key={habit.id ?? `${habit.title}-${habit.category}`}>
+                  <span className="profile__balance-habit-name">
+                    {habit.title} <span>({habit.category})</span>
+                  </span>
+                  <span className="profile__balance-habit-count">{habit.count}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </section>
 
         <section className="profile__section">
