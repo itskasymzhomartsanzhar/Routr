@@ -239,6 +239,7 @@ class HabitCompletion(models.Model):
     habit = models.ForeignKey(Habit, on_delete=models.CASCADE, related_name="completions")
     date = models.DateField("Дата")
     count = models.PositiveIntegerField("Количество", default=0)
+    xp_awarded = models.BooleanField("XP начислен", default=False)
 
     class Meta:
         verbose_name = "Выполнение привычки"

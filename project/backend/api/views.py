@@ -65,6 +65,7 @@ from .robokassa import (
 logger = logging.getLogger(__name__)
 
 MAX_TIMEZONE_NAME_LENGTH = 64
+PREMIUM_TOTAL_HABITS_LIMIT = 50
 
 
 class TelegramDeliveryError(Exception):
@@ -289,6 +290,7 @@ def _apply_payment_product_effects(user: User, product: Product, now: datetime) 
         user.premium_expiration = base + timedelta(days=duration_days)
         update_fields.append("premium_expiration")
         effects["premium_days"] = duration_days
+        effects["max_habits"] = PREMIUM_TOTAL_HABITS_LIMIT
 
     if update_fields:
         user.save(update_fields=list(sorted(set(update_fields))))
@@ -299,6 +301,8 @@ def _format_payment_effects(product: Product, effects: dict) -> str:
     lines = []
     if effects.get("premium_days"):
         lines.append(f"Премиум: +{effects['premium_days']} дн.")
+    if effects.get("max_habits"):
+        lines.append(f"Лимит привычек: {effects['max_habits']}")
     if effects.get("xp_boost_multiplier"):
         lines.append(f"Бустер XP: ×{effects['xp_boost_multiplier']}")
     if effects.get("extra_habit_slots"):
@@ -316,6 +320,31 @@ def _get_week_start(target_date: date) -> date:
 
 def _is_premium_active(user: User) -> bool:
     return bool(user.premium_expiration and user.premium_expiration > timezone.now())
+
+
+def _parse_non_negative_limit(value):
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return None
+    return parsed if parsed >= 0 else None
+
+
+def _get_effective_habit_limits(user: User, title: Title | None = None) -> dict:
+    resolved_title = title or _resolve_title(user)
+    privileges = dict(resolved_title.privileges or {}) if resolved_title else {}
+    max_total = _parse_non_negative_limit(privileges.get("total_habits"))
+    if max_total is not None:
+        max_total += int(user.extra_habit_slots or 0)
+    if _is_premium_active(user):
+        max_total = max(max_total or 0, PREMIUM_TOTAL_HABITS_LIMIT)
+    stats_days = _parse_non_negative_limit(privileges.get("stats_days"))
+    return {
+        "max_total": max_total,
+        "max_public": _parse_non_negative_limit(privileges.get("public_habits")),
+        "public_join_only": bool(privileges.get("public_join_only", False)),
+        "stats_days": max(stats_days or 30, 1),
+    }
 
 
 def _get_streak_multiplier(streak_days: int) -> float:
@@ -652,6 +681,12 @@ def _active_habits_queryset(user: User, today: date):
         Habit.objects.filter(owner=user, is_archived=False)
         .filter(Q(end_date__isnull=True) | Q(end_date__gte=today))
     )
+
+
+def _habit_created_date_for_user(habit: Habit, user: User) -> date:
+    timezone_name = _normalize_timezone_name(getattr(user, "timezone_name", ""))
+    tz = ZoneInfo(timezone_name) if timezone_name else timezone.get_current_timezone()
+    return timezone.localtime(habit.created_at, tz).date()
 
 
 def _get_redis():
@@ -1128,6 +1163,7 @@ def _get_user_live_xp(user: User) -> int:
 def _serialize_user_with_live_xp(user: User) -> dict:
     payload = UserSerializer(user).data
     payload["xp"] = _get_user_live_xp(user)
+    payload["habit_limits"] = _get_effective_habit_limits(user)
     return payload
 
 
@@ -2292,23 +2328,10 @@ class HabitViewSet(viewsets.ModelViewSet):
 
     @staticmethod
     def _parse_limit(value):
-        try:
-            parsed = int(value)
-        except (TypeError, ValueError):
-            return None
-        return parsed if parsed >= 0 else None
+        return _parse_non_negative_limit(value)
 
     def _get_habit_limits(self, user: User) -> dict:
-        title = _resolve_title(user)
-        privileges = title.privileges if title else {}
-        max_total = self._parse_limit(privileges.get("total_habits"))
-        if max_total is not None:
-            max_total += int(user.extra_habit_slots or 0)
-        return {
-            "max_total": max_total,
-            "max_public": self._parse_limit(privileges.get("public_habits")),
-            "public_join_only": bool(privileges.get("public_join_only", False)),
-        }
+        return _get_effective_habit_limits(user)
 
     def _validate_habit_limits(
         self,
@@ -2389,7 +2412,9 @@ class HabitViewSet(viewsets.ModelViewSet):
             queryset = [
                 habit
                 for habit in queryset
-                if not habit.repeat_days or weekday_name in habit.repeat_days
+                if target_date >= _habit_created_date_for_user(habit, request.user)
+                and (not habit.end_date or target_date <= habit.end_date)
+                and (not habit.repeat_days or weekday_name in habit.repeat_days)
             ]
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
@@ -2449,8 +2474,16 @@ class HabitViewSet(viewsets.ModelViewSet):
     def complete(self, request, pk=None):
         habit = self.get_object()
         date_value = request.data.get("date")
-        increment = int(request.data.get("count", 1))
+        action = str(request.data.get("action") or "add").strip().lower()
+        try:
+            increment = int(request.data.get("count", 1))
+        except (TypeError, ValueError):
+            return Response({"detail": "count must be an integer"}, status=status.HTTP_400_BAD_REQUEST)
         awarded_xp = 0
+        raw_xp = 0
+        should_award_xp = False
+        if action not in {"add", "toggle"}:
+            return Response({"detail": "Invalid action"}, status=status.HTTP_400_BAD_REQUEST)
         if increment < 1:
             return Response({"detail": "count must be >= 1"}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -2465,6 +2498,8 @@ class HabitViewSet(viewsets.ModelViewSet):
         today = timezone.localdate()
         if completion_date > today:
             return Response({"detail": "Cannot complete habit for a future date"}, status=status.HTTP_400_BAD_REQUEST)
+        if completion_date < _habit_created_date_for_user(habit, request.user):
+            return Response({"detail": "Habit did not exist on this date"}, status=status.HTTP_400_BAD_REQUEST)
         if habit.is_archived:
             return Response({"detail": "Habit is archived"}, status=status.HTTP_400_BAD_REQUEST)
         if habit.end_date and completion_date > habit.end_date:
@@ -2490,18 +2525,23 @@ class HabitViewSet(viewsets.ModelViewSet):
             )
             goal = max(habit.goal, 1)
             prev_count = completion.count
-            new_count = min(goal, completion.count + increment)
+            completed_before = prev_count >= goal
+            if action == "toggle" and completed_before:
+                new_count = max(prev_count - increment, 0)
+            else:
+                new_count = min(goal, prev_count + increment)
+            completed_now = new_count >= goal
+            should_award_xp = (not completed_before and completed_now and not completion.xp_awarded)
             completion.count = new_count
-            completion.save()
+            if should_award_xp:
+                completion.xp_awarded = True
+            completion.save(update_fields=["count", "xp_awarded"])
         added_count = max(new_count - prev_count, 0)
 
-        if added_count > 0:
+        if added_count > 0 and should_award_xp:
             streak_days = _calculate_streak_days(request.user, completion_date)
             multiplier = _get_streak_multiplier(streak_days)
-            completed_before = prev_count >= goal
-            completed_now = new_count >= goal
-            completed_increment = 1 if (not completed_before and completed_now) else 0
-            raw_xp = int(round(completed_increment * XP_BASE * multiplier))
+            raw_xp = int(round(XP_BASE * multiplier))
             habits_today = (
                 HabitCompletion.objects.filter(
                     habit__owner=request.user, date=completion_date, count__gte=F("habit__goal")

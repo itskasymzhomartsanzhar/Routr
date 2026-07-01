@@ -60,10 +60,20 @@ const Home = () => {
     return weekdayNames[normalized]
   }
 
+  const getDateOnly = (value) => {
+    if (!value) return null
+    const raw = String(value)
+    return raw.includes('T') ? raw.split('T')[0] : raw
+  }
+
   const filterHabitsByDate = (items, isoDate) => {
     const weekdayName = getWeekdayNameFromIso(isoDate)
     if (!weekdayName) return items
     return (items || []).filter((habit) => {
+      const createdDate = getDateOnly(habit?.createdAt || habit?.created_at)
+      const endDate = getDateOnly(habit?.endDate || habit?.end_date)
+      if (createdDate && isoDate < createdDate) return false
+      if (endDate && isoDate > endDate) return false
       const repeatDays = habit?.repeatDays || []
       return !repeatDays.length || repeatDays.includes(weekdayName)
     })
@@ -162,16 +172,29 @@ const Home = () => {
   }, [isAuthenticated, bootstrap?.products])
 
   useEffect(() => {
-    if (!Array.isArray(bootstrap?.titles) || !bootstrap.titles.length) return
-    const currentTitle = bootstrap.titles.find((title) => title.is_current)
+    const hasTitles = Array.isArray(bootstrap?.titles) && bootstrap.titles.length > 0
+    const hasUserLimits = Boolean(bootstrap?.user?.habit_limits)
+    if (!hasTitles && !hasUserLimits) return
+    const currentTitle = hasTitles ? bootstrap.titles.find((title) => title.is_current) : null
     const privileges = currentTitle?.privileges ?? {}
+    const userLimits = bootstrap?.user?.habit_limits ?? {}
+    const isPremiumActive = Boolean(
+      bootstrap?.user?.is_premium ||
+      (bootstrap?.user?.premium_expiration && new Date(bootstrap.user.premium_expiration) > new Date())
+    )
+    const apiMaxTotal = parseLimit(userLimits.max_total)
+    const titleMaxTotal = parseLimit(privileges.total_habits)
+    let maxTotal = apiMaxTotal ?? titleMaxTotal
+    if (isPremiumActive) {
+      maxTotal = Math.max(maxTotal ?? 0, 50)
+    }
     setHabitLimits({
-      maxTotal: parseLimit(privileges.total_habits),
-      maxPublic: parseLimit(privileges.public_habits),
-      publicJoinOnly: Boolean(privileges.public_join_only),
-      statsDays: parseLimit(privileges.stats_days) ?? 30
+      maxTotal,
+      maxPublic: parseLimit(userLimits.max_public) ?? parseLimit(privileges.public_habits),
+      publicJoinOnly: userLimits.public_join_only ?? Boolean(privileges.public_join_only),
+      statsDays: parseLimit(userLimits.stats_days) ?? parseLimit(privileges.stats_days) ?? 30
     })
-  }, [bootstrap?.titles])
+  }, [bootstrap?.titles, bootstrap?.user])
 
   useEffect(() => {
     if (!isAuthenticated) return
@@ -187,19 +210,7 @@ const Home = () => {
     const payload = mapHabitToApi(habitData)
     const created = await api.habits.create(payload)
     const createdHabit = mapHabitFromApi(created)
-    const weekdays = [
-      'Понедельник',
-      'Вторник',
-      'Среда',
-      'Четверг',
-      'Пятница',
-      'Суббота',
-      'Воскресенье'
-    ]
-    const selected = new Date(selectedDate)
-    const dayName = weekdays[selected.getDay() === 0 ? 6 : selected.getDay() - 1]
-    const shouldShow =
-      !createdHabit.repeatDays?.length || createdHabit.repeatDays.includes(dayName)
+    const shouldShow = filterHabitsByDate([createdHabit], selectedDate).length > 0
     setHabits((prev) => (shouldShow ? [createdHabit, ...prev] : prev))
     setAllHabits((prev) => [createdHabit, ...prev])
     updateBootstrapHabits((prev) => [created, ...prev])
@@ -209,7 +220,13 @@ const Home = () => {
     const payload = mapHabitToApi(habitData)
     const updated = await api.habits.update(habitData.id, payload)
     const updatedHabit = mapHabitFromApi(updated)
-    setHabits((prev) => prev.map((habit) => (habit.id === updated.id ? updatedHabit : habit)))
+    const shouldShow = filterHabitsByDate([updatedHabit], selectedDate).length > 0
+    setHabits((prev) => {
+      const exists = prev.some((habit) => habit.id === updated.id)
+      if (!shouldShow) return prev.filter((habit) => habit.id !== updated.id)
+      if (!exists) return [updatedHabit, ...prev]
+      return prev.map((habit) => (habit.id === updated.id ? updatedHabit : habit))
+    })
     setAllHabits((prev) => prev.map((habit) => (habit.id === updated.id ? updatedHabit : habit)))
     updateBootstrapHabits((prev) => prev.map((habit) => (habit.id === updated.id ? updated : habit)))
   }
@@ -239,13 +256,17 @@ const Home = () => {
     })
     try {
       const updated = await request.post(ENDPOINTS.habits.complete(id), {
+        action: 'toggle',
         count: 1,
         date: selectedDate
       })
       const updatedHabit = mapHabitFromApi(updated)
       setHabits((prev) => prev.map((habit) => (habit.id === updated.id ? updatedHabit : habit)))
-      setAllHabits((prev) => prev.map((habit) => (habit.id === updated.id ? updatedHabit : habit)))
-      updateBootstrapHabits((prev) => prev.map((habit) => (habit.id === updated.id ? updated : habit)))
+      setActiveHabit((prev) => (prev?.id === updated.id ? updatedHabit : prev))
+      if (selectedDate === today) {
+        setAllHabits((prev) => prev.map((habit) => (habit.id === updated.id ? updatedHabit : habit)))
+        updateBootstrapHabits((prev) => prev.map((habit) => (habit.id === updated.id ? updated : habit)))
+      }
       setBootstrapData((prev) => {
         const progress = updated?.user_progress || {}
         const titles = Array.isArray(prev?.titles) ? prev.titles : []

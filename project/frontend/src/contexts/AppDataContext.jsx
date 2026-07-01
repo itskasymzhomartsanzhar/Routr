@@ -77,7 +77,25 @@ export const AppDataProvider = ({ children }) => {
       return
     }
     loadBootstrap()
-  }, [authLoading, isAuthenticated])
+  }, [authLoading, isAuthenticated, loadBootstrap])
+
+  useEffect(() => {
+    if (!isAuthenticated) return undefined
+    let lastRefreshAt = 0
+    const refreshOnReturn = () => {
+      if (document.visibilityState && document.visibilityState !== 'visible') return
+      const now = Date.now()
+      if (now - lastRefreshAt < 3000) return
+      lastRefreshAt = now
+      loadBootstrap({ silent: true })
+    }
+    window.addEventListener('focus', refreshOnReturn)
+    document.addEventListener('visibilitychange', refreshOnReturn)
+    return () => {
+      window.removeEventListener('focus', refreshOnReturn)
+      document.removeEventListener('visibilitychange', refreshOnReturn)
+    }
+  }, [isAuthenticated, loadBootstrap])
 
   const setBootstrapData = useCallback((updater) => {
     setBootstrap((prev) => {
