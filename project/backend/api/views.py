@@ -1150,6 +1150,24 @@ def _get_pending_total_xp_for_user(redis, user_id: int) -> int:
         return 0
 
 
+def _get_pending_total_map(redis) -> dict[int, int]:
+    if not redis:
+        return {}
+    try:
+        keys = _scan_keys(redis, f"{XP_BUCKET_KEY_PREFIX}*")
+        result: dict[int, int] = {}
+        for key in keys:
+            raw = redis.hgetall(key) or {}
+            for user_id_raw, xp_raw in raw.items():
+                user_id = _int_from_redis(user_id_raw)
+                xp_value = _int_from_redis(xp_raw)
+                if user_id > 0 and xp_value > 0:
+                    result[user_id] = result.get(user_id, 0) + xp_value
+        return result
+    except Exception:
+        return {}
+
+
 def _get_user_live_xp(user: User) -> int:
     base_xp = int(user.xp or 0)
     redis = _get_redis()
@@ -1727,22 +1745,24 @@ def _build_live_me_entry(user: User, range_key: str, today: date, ranking_users:
     if not me_user.participation_in_ratings:
         return None
 
-    if range_key == "all":
-        rank = (
-            User.objects.filter(participation_in_ratings=True, xp__gt=me_user.xp).count()
-            + User.objects.filter(participation_in_ratings=True, xp=me_user.xp, id__lt=me_user.id).count()
-            + 1
-        )
-        return _serialize_leaderboard_me(me_user, xp_value=int(me_user.xp or 0), rank=rank)
-
     users = ranking_users or []
     scores = score_map or {}
-    me_score = int(scores.get(me_user.id, 0))
+    me_score = int(scores.get(me_user.id, int(me_user.xp or 0)))
     me_rank = None
     for idx, ranked in enumerate(users, start=1):
         if ranked.id == me_user.id:
             me_rank = idx
             break
+
+    if range_key == "all" and me_rank is None:
+        # Fallback if user is not in the passed ranking (e.g. participation_in_ratings was off)
+        rank = (
+            User.objects.filter(participation_in_ratings=True, xp__gt=me_user.xp).count()
+            + User.objects.filter(participation_in_ratings=True, xp=me_user.xp, id__lt=me_user.id).count()
+            + 1
+        )
+        me_rank = rank
+
     return _serialize_leaderboard_me(me_user, xp_value=me_score, rank=me_rank)
 
 
@@ -1761,8 +1781,10 @@ def _build_leaderboard_payload(user: User, range_key: str = "month", limit: int 
     ranking_scores: dict[int, int] | None = None
     if items is None:
         if normalized_range == "all":
-            ranking_users = list(User.objects.filter(participation_in_ratings=True).order_by("-xp", "id"))
-            ranking_scores = {u.id: int(u.xp or 0) for u in ranking_users}
+            pending_map = _get_pending_total_map(redis) if redis else {}
+            ranking_users = list(User.objects.filter(participation_in_ratings=True))
+            ranking_scores = {u.id: int(u.xp or 0) + pending_map.get(u.id, 0) for u in ranking_users}
+            ranking_users.sort(key=lambda u: (-ranking_scores.get(u.id, 0), u.id))
             items = _build_items_from_users(ranking_users, ranking_scores, normalized_limit)
         else:
             ranking_users, ranking_scores = _build_period_ranking(normalized_range, today, redis=redis)
@@ -1771,7 +1793,12 @@ def _build_leaderboard_payload(user: User, range_key: str = "month", limit: int 
             _cache_set_safe(cache_key, items, timeout=LEADERBOARD_CACHE_TTL_SECONDS)
 
     if normalized_range == "all":
-        me = _build_live_me_entry(user, normalized_range, today)
+        if ranking_users is None or ranking_scores is None:
+            pending_map = _get_pending_total_map(redis) if redis else {}
+            ranking_users = list(User.objects.filter(participation_in_ratings=True))
+            ranking_scores = {u.id: int(u.xp or 0) + pending_map.get(u.id, 0) for u in ranking_users}
+            ranking_users.sort(key=lambda u: (-ranking_scores.get(u.id, 0), u.id))
+        me = _build_live_me_entry(user, normalized_range, today, ranking_users=ranking_users, score_map=ranking_scores)
     else:
         if ranking_users is None or ranking_scores is None:
             ranking_users, ranking_scores = _build_period_ranking(normalized_range, today, redis=redis)
