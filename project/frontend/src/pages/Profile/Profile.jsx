@@ -22,6 +22,11 @@ const Profile = () => {
   const [settings, setSettings] = useState(null)
   const [isSettingsSaving, setIsSettingsSaving] = useState(false)
   const [balanceData, setBalanceData] = useState([])
+  const [statsRange, setStatsRange] = useState('7d')
+  const [statsCustom, setStatsCustom] = useState({ start: '', end: '' })
+  const [statsData, setStatsData] = useState(null)
+  const [statsError, setStatsError] = useState('')
+  const [isStatsLoading, setIsStatsLoading] = useState(false)
   const [premiumStatus, setPremiumStatus] = useState({ type: null, message: '' })
   const [isPremiumPaying, setIsPremiumPaying] = useState(false)
   const [avatarFailed, setAvatarFailed] = useState(false)
@@ -67,19 +72,17 @@ const Profile = () => {
     })
   }
   const totalBalance = balanceData.reduce((sum, item) => sum + item.value, 0)
-  const balanceHabitRows = (Array.isArray(bootstrap?.habits) ? bootstrap.habits : [])
-    .filter((habit) => !liveUser?.balance_wheel || habit?.visibility === 'Публичный')
-    .map((habit) => {
-      const category = typeof habit?.category === 'string'
-        ? habit.category
-        : habit?.category?.name
-      return {
-        id: habit?.id,
-        title: habit?.title || 'Привычка',
-        category: (category || 'Без категории').toLocaleLowerCase('ru-RU'),
-        count: Math.max(Number(habit?.total_completions ?? habit?.totalCompletions ?? 0) || 0, 0),
-      }
-    })
+  const statsRanges = [
+    { id: '7d', label: '7 дней' },
+    { id: 'month', label: 'Месяц' },
+    { id: 'custom', label: 'Период' }
+  ]
+  const todayIso = new Date().toLocaleDateString('en-CA')
+  const statsRows = (Array.isArray(statsData?.habits) ? statsData.habits : [])
+    .map((row) => ({
+      ...row,
+      category: (row.category || 'Без категории').toLocaleLowerCase('ru-RU'),
+    }))
     .sort((first, second) => second.count - first.count || first.title.localeCompare(second.title, 'ru'))
   const gapSize = 2
   const segmentCount = balanceData.length
@@ -150,6 +153,46 @@ const Profile = () => {
       setBalanceData(assignUniqueColors(mapped))
     }
   }, [liveUser, bootstrap?.balance?.items])
+
+  useEffect(() => {
+    let cancelled = false
+    let params = null
+    if (statsRange === 'custom') {
+      if (statsCustom.start && statsCustom.end) {
+        if (statsCustom.start > statsCustom.end) {
+          setStatsError('Начало периода позже его конца')
+          return undefined
+        }
+        params = { start: statsCustom.start, end: statsCustom.end }
+      }
+    } else {
+      params = { period: statsRange }
+    }
+    if (!params) {
+      setStatsData(null)
+      setStatsError('')
+      return undefined
+    }
+    const loadStats = async () => {
+      setIsStatsLoading(true)
+      setStatsError('')
+      try {
+        const data = await request.get(ENDPOINTS.habits.stats, params)
+        if (!cancelled) setStatsData(data)
+      } catch (error) {
+        if (!cancelled) {
+          setStatsData(null)
+          setStatsError(error?.response?.data?.detail || 'Не удалось загрузить статистику')
+        }
+      } finally {
+        if (!cancelled) setIsStatsLoading(false)
+      }
+    }
+    loadStats()
+    return () => {
+      cancelled = true
+    }
+  }, [statsRange, statsCustom.start, statsCustom.end])
 
   useEffect(() => {
     return () => {
@@ -544,18 +587,71 @@ const Profile = () => {
               ))}
             </div>
           </div>
-          {balanceHabitRows.length > 0 && (
-            <div className="profile__balance-habits">
-              {balanceHabitRows.map((habit) => (
-                <div className="profile__balance-habit" key={habit.id ?? `${habit.title}-${habit.category}`}>
-                  <span className="profile__balance-habit-name">
-                    {habit.title} <span>({habit.category})</span>
-                  </span>
-                  <span className="profile__balance-habit-count">{habit.count}</span>
-                </div>
+        </section>
+
+        <section className="profile__section">
+          <div className="profile__section-title">Статистика</div>
+          <div className="profile__stats">
+            <div className="profile__stats-tabs">
+              {statsRanges.map((range) => (
+                <button
+                  key={range.id}
+                  className={`profile__stats-tab ${statsRange === range.id ? 'profile__stats-tab--active' : ''}`}
+                  type="button"
+                  onClick={() => setStatsRange(range.id)}
+                >
+                  {range.label}
+                </button>
               ))}
             </div>
-          )}
+            {statsRange === 'custom' && (
+              <div className="profile__stats-period">
+                <input
+                  className="profile__stats-date"
+                  type="date"
+                  value={statsCustom.start}
+                  max={statsCustom.end || todayIso}
+                  onChange={(event) => setStatsCustom((prev) => ({ ...prev, start: event.target.value }))}
+                />
+                <span className="profile__stats-period-divider">—</span>
+                <input
+                  className="profile__stats-date"
+                  type="date"
+                  value={statsCustom.end}
+                  max={todayIso}
+                  onChange={(event) => setStatsCustom((prev) => ({ ...prev, end: event.target.value }))}
+                />
+              </div>
+            )}
+            {statsError && <div className="profile__stats-error">{statsError}</div>}
+            {statsRange === 'custom' && !statsError && (!statsCustom.start || !statsCustom.end) && (
+              <div className="profile__stats-hint">Выберите начало и конец периода</div>
+            )}
+            {statsData && (
+              <>
+                <div className="profile__stats-total">
+                  <span className="profile__stats-total-label">Общий балл за период</span>
+                  <span className="profile__stats-total-value">{statsData.total}</span>
+                </div>
+                <div className="profile__balance-habits">
+                  {statsRows.map((row) => (
+                    <div className="profile__balance-habit" key={`${row.id}-${row.title}`}>
+                      <span className="profile__balance-habit-name">
+                        {row.title} <span>({row.category})</span>
+                        {!row.is_current_title && <span className="profile__stats-chip">ранее</span>}
+                        {row.is_archived && <span className="profile__stats-chip profile__stats-chip--archived">архив</span>}
+                      </span>
+                      <span className="profile__balance-habit-count">{row.count}</span>
+                    </div>
+                  ))}
+                  {!statsRows.length && !isStatsLoading && (
+                    <div className="profile__stats-hint">За выбранный период данных нет</div>
+                  )}
+                </div>
+              </>
+            )}
+            {isStatsLoading && !statsData && <div className="profile__stats-hint">Загрузка…</div>}
+          </div>
         </section>
 
         <section className="profile__section">

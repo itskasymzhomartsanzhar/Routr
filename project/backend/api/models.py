@@ -235,6 +235,25 @@ class Habit(models.Model):
         return f"{self.title} ({self.owner_id})"
 
 
+class HabitTitlePeriod(models.Model):
+    habit = models.ForeignKey(Habit, on_delete=models.CASCADE, related_name="title_periods")
+    title = models.CharField("Название в периоде", max_length=255)
+    start_date = models.DateField("Первый день")
+    end_date = models.DateField("Последний день")
+    created_at = models.DateTimeField("Создан", auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Период названия привычки"
+        verbose_name_plural = "Периоды названий привычек"
+        ordering = ("habit_id", "start_date", "id")
+        indexes = [
+            models.Index(fields=["habit", "start_date"]),
+        ]
+
+    def __str__(self):
+        return f"{self.habit_id} {self.title} [{self.start_date}..{self.end_date}]"
+
+
 class HabitCompletion(models.Model):
     habit = models.ForeignKey(Habit, on_delete=models.CASCADE, related_name="completions")
     date = models.DateField("Дата")

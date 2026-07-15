@@ -35,6 +35,7 @@ from .models import (
     HabitCopy,
     HabitCompletion,
     HabitShare,
+    HabitTitlePeriod,
     Payment,
     Product,
     Quest,
@@ -687,6 +688,26 @@ def _habit_created_date_for_user(habit: Habit, user: User) -> date:
     timezone_name = _normalize_timezone_name(getattr(user, "timezone_name", ""))
     tz = ZoneInfo(timezone_name) if timezone_name else timezone.get_current_timezone()
     return timezone.localtime(habit.created_at, tz).date()
+
+
+def _record_habit_title_change(habit: Habit, old_title: str, user: User) -> None:
+    today = timezone.localdate()
+    last_period = habit.title_periods.order_by("-end_date").first()
+    if last_period:
+        prev_start = last_period.end_date + timedelta(days=1)
+    else:
+        prev_start = _habit_created_date_for_user(habit, user)
+    prev_end = today - timedelta(days=1)
+    # Переименование в день создания или повторное в тот же день —
+    # у старого названия нет ни одного завершённого дня, период не пишем.
+    if prev_start > prev_end:
+        return
+    HabitTitlePeriod.objects.create(
+        habit=habit,
+        title=old_title,
+        start_date=prev_start,
+        end_date=prev_end,
+    )
 
 
 def _get_redis():
@@ -2461,6 +2482,7 @@ class HabitViewSet(viewsets.ModelViewSet):
             user = User.objects.select_for_update().get(pk=self.request.user.pk)
             current_habit = serializer.instance
             old_goal = current_habit.goal
+            old_title = current_habit.title
             target_visibility = serializer.validated_data.get("visibility", current_habit.visibility)
             next_goal = serializer.validated_data.get("goal", current_habit.goal)
             self._validate_habit_limits(
@@ -2470,6 +2492,8 @@ class HabitViewSet(viewsets.ModelViewSet):
                 current_habit=current_habit,
             )
             habit = serializer.save()
+            if habit.title != old_title:
+                _record_habit_title_change(habit, old_title, user)
             if next_goal != old_goal:
                 _rebuild_habit_stats(habit, timezone.localdate())
             transaction.on_commit(_invalidate_reminder_index)
@@ -2908,7 +2932,9 @@ class HabitViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=["get"], url_path="stats")
     def stats(self, request, pk=None):
-        habit = self.get_object()
+        habit = Habit.objects.filter(owner=request.user, pk=pk).first()
+        if habit is None:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
         start = request.query_params.get("start")
         end = request.query_params.get("end")
         if not start or not end:
@@ -2943,48 +2969,100 @@ class HabitViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=["get"], url_path="stats")
     def stats_all(self, request):
-        start = request.query_params.get("start")
-        end = request.query_params.get("end")
-        if not start or not end:
-            return Response({"detail": "start and end are required"}, status=status.HTTP_400_BAD_REQUEST)
-        try:
-            start_date = date.fromisoformat(start)
-            end_date = date.fromisoformat(end)
-        except ValueError:
-            return Response({"detail": "Invalid date format"}, status=status.HTTP_400_BAD_REQUEST)
-        if start_date > end_date:
-            return Response({"detail": "start must be <= end"}, status=status.HTTP_400_BAD_REQUEST)
-
         today = timezone.localdate()
         stats_days_limit = _get_stats_days_limit(request.user)
         allowed_start = today - timedelta(days=stats_days_limit - 1)
-        if start_date < allowed_start or end_date > today:
-            return Response(
-                {"detail": f"Period exceeds role limit ({stats_days_limit} days)"},
-                status=status.HTTP_403_FORBIDDEN,
-            )
 
-        habits = self.get_queryset()
+        period = request.query_params.get("period")
+        if period in ("7d", "week"):
+            start_date = max(today - timedelta(days=6), allowed_start)
+            end_date = today
+        elif period == "month":
+            start_date = max(today.replace(day=1), allowed_start)
+            end_date = today
+        elif period:
+            return Response({"detail": "Invalid period"}, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            start = request.query_params.get("start")
+            end = request.query_params.get("end")
+            if not start or not end:
+                return Response({"detail": "start and end are required"}, status=status.HTTP_400_BAD_REQUEST)
+            try:
+                start_date = date.fromisoformat(start)
+                end_date = date.fromisoformat(end)
+            except ValueError:
+                return Response({"detail": "Invalid date format"}, status=status.HTTP_400_BAD_REQUEST)
+            if start_date > end_date:
+                return Response({"detail": "start must be <= end"}, status=status.HTTP_400_BAD_REQUEST)
+            if start_date < allowed_start or end_date > today:
+                return Response(
+                    {"detail": f"Period exceeds role limit ({stats_days_limit} days)"},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+
+        habits = (
+            Habit.objects.filter(owner=request.user)
+            .select_related("category")
+            .order_by("-created_at")
+        )
+
+        periods_by_habit = {}
+        for title_period in HabitTitlePeriod.objects.filter(habit__in=habits).order_by("start_date", "id"):
+            periods_by_habit.setdefault(title_period.habit_id, []).append(title_period)
+
         completions = HabitCompletion.objects.filter(
             habit__in=habits, date__range=(start_date, end_date)
         )
-        totals_by_habit = {}
+        # Ключ — (habit_id, индекс периода названия) либо (habit_id, None) для текущего названия.
+        segment_totals = {}
         for item in completions:
-            totals_by_habit[item.habit_id] = totals_by_habit.get(item.habit_id, 0) + item.count
+            segment_index = None
+            for index, title_period in enumerate(periods_by_habit.get(item.habit_id, [])):
+                if title_period.start_date <= item.date <= title_period.end_date:
+                    segment_index = index
+                    break
+            key = (item.habit_id, segment_index)
+            segment_totals[key] = segment_totals.get(key, 0) + item.count
 
         data = []
         total = 0
         for habit in habits:
-            count = totals_by_habit.get(habit.id, 0)
-            total += count
+            category_name = habit.category.name if habit.category else ""
+            historical_counts = {}
+            for index, title_period in enumerate(periods_by_habit.get(habit.id, [])):
+                count = segment_totals.get((habit.id, index), 0)
+                if count > 0:
+                    historical_counts[title_period.title] = historical_counts.get(title_period.title, 0) + count
+            current_count = segment_totals.get((habit.id, None), 0)
+            # Если привычку вернули к старому названию, объединяем строки.
+            current_count += historical_counts.pop(habit.title, 0)
+
+            for old_title, count in historical_counts.items():
+                total += count
+                data.append({
+                    "id": habit.id,
+                    "title": old_title,
+                    "category": category_name,
+                    "count": count,
+                    "is_archived": habit.is_archived,
+                    "is_current_title": False,
+                })
+            total += current_count
             data.append({
                 "id": habit.id,
                 "title": habit.title,
-                "category": habit.category.name if habit.category else "",
-                "count": count
+                "category": category_name,
+                "count": current_count,
+                "is_archived": habit.is_archived,
+                "is_current_title": True,
             })
 
-        return Response({"total": total, "habits": data})
+        return Response({
+            "start": start_date.isoformat(),
+            "end": end_date.isoformat(),
+            "total": total,
+            "habits": data,
+        })
 
     @action(detail=False, methods=["get"], url_path="balance")
     def balance(self, request):

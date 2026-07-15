@@ -611,3 +611,37 @@ body[data-theme='dark'] .menu__item {
 body[data-theme='dark'] .menu__item--active {
   color: #4c55ff;
 }
+
+body[data-theme='dark'] .profile__stats-tabs {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+body[data-theme='dark'] .profile__stats-tab {
+  color: var(--routr-text-soft);
+}
+
+body[data-theme='dark'] .profile__stats-tab--active {
+  background: var(--routr-card-strong);
+  color: #8f96ff;
+  box-shadow: none;
+}
+
+body[data-theme='dark'] .profile__stats-date {
+  background: var(--routr-card);
+  border-color: var(--routr-border);
+  color: var(--routr-text);
+}
+
+body[data-theme='dark'] .profile__stats-total {
+  background: var(--routr-card);
+}
+
+body[data-theme='dark'] .profile__stats-chip {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--routr-text-soft);
+}
+
+body[data-theme='dark'] .profile__stats-chip--archived {
+  background: rgba(210, 85, 85, 0.18);
+  color: #e28c8c;
+}
