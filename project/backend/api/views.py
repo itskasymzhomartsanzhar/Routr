@@ -690,6 +690,21 @@ def _habit_created_date_for_user(habit: Habit, user: User) -> date:
     return timezone.localtime(habit.created_at, tz).date()
 
 
+def _habit_was_active_on_date(habit: Habit, user: User, target_date: date, today: date) -> bool:
+    if target_date < _habit_created_date_for_user(habit, user):
+        return False
+    if habit.end_date:
+        return target_date <= habit.end_date
+    if habit.is_archived:
+        # Архив без end_date (например, вручную) — считаем активной до даты архивации.
+        if not habit.archived_at:
+            return target_date < today
+        timezone_name = _normalize_timezone_name(getattr(user, "timezone_name", ""))
+        tz = ZoneInfo(timezone_name) if timezone_name else timezone.get_current_timezone()
+        return target_date < timezone.localtime(habit.archived_at, tz).date()
+    return True
+
+
 def _record_habit_title_change(habit: Habit, old_title: str, user: User) -> None:
     today = timezone.localdate()
     last_period = habit.title_periods.order_by("-end_date").first()
@@ -2440,30 +2455,43 @@ class HabitViewSet(viewsets.ModelViewSet):
         )
 
     def list(self, request, *args, **kwargs):
-        queryset = self.get_queryset()
         date_param = request.query_params.get("date")
-        if date_param:
-            try:
-                target_date = date.fromisoformat(date_param)
-            except ValueError:
-                return Response({"detail": "Invalid date format"}, status=status.HTTP_400_BAD_REQUEST)
-            weekdays = [
-                "Понедельник",
-                "Вторник",
-                "Среда",
-                "Четверг",
-                "Пятница",
-                "Суббота",
-                "Воскресенье",
-            ]
-            weekday_name = weekdays[target_date.weekday()]
-            queryset = [
-                habit
-                for habit in queryset
-                if target_date >= _habit_created_date_for_user(habit, request.user)
-                and (not habit.end_date or target_date <= habit.end_date)
-                and (not habit.repeat_days or weekday_name in habit.repeat_days)
-            ]
+        if not date_param:
+            serializer = self.get_serializer(self.get_queryset(), many=True)
+            return Response(serializer.data)
+
+        try:
+            target_date = date.fromisoformat(date_param)
+        except ValueError:
+            return Response({"detail": "Invalid date format"}, status=status.HTTP_400_BAD_REQUEST)
+
+        today = timezone.localdate()
+        _archive_expired_habits(request.user, today)
+        _rollup_user_habit_stats(request.user, today)
+        # Для прошлых дат берём и архивные привычки: показываем те,
+        # что были активны на выбранную дату, а не на сегодня.
+        habits = (
+            Habit.objects.filter(owner=request.user)
+            .select_related("category")
+            .prefetch_related("completions")
+            .order_by("-created_at")
+        )
+        weekdays = [
+            "Понедельник",
+            "Вторник",
+            "Среда",
+            "Четверг",
+            "Пятница",
+            "Суббота",
+            "Воскресенье",
+        ]
+        weekday_name = weekdays[target_date.weekday()]
+        queryset = [
+            habit
+            for habit in habits
+            if _habit_was_active_on_date(habit, request.user, target_date, today)
+            and (not habit.repeat_days or weekday_name in habit.repeat_days)
+        ]
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
@@ -2523,7 +2551,9 @@ class HabitViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=["post"], url_path="complete")
     def complete(self, request, pk=None):
-        habit = self.get_object()
+        habit = Habit.objects.filter(owner=request.user, pk=pk).first()
+        if habit is None:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
         date_value = request.data.get("date")
         action = str(request.data.get("action") or "add").strip().lower()
         try:

@@ -55,9 +55,9 @@ const HabitsSection = ({ habits, onToggleHabit, onSkipHabit, onEditHabit, onOpen
           >
             <div
               className="habit-card"
-              onTouchStart={!habit.completed ? handleTouchStart : undefined}
-              onTouchMove={!habit.completed ? handleTouchMove : undefined}
-              onTouchEnd={!habit.completed ? () => handleTouchEnd(habit.id) : undefined}
+              onTouchStart={!habit.completed && !habit.isArchived ? handleTouchStart : undefined}
+              onTouchMove={!habit.completed && !habit.isArchived ? handleTouchMove : undefined}
+              onTouchEnd={!habit.completed && !habit.isArchived ? () => handleTouchEnd(habit.id) : undefined}
               onClick={() => {
                 if (onOpenDetails) {
                   onOpenDetails(habit)
@@ -88,13 +88,17 @@ const HabitsSection = ({ habits, onToggleHabit, onSkipHabit, onEditHabit, onOpen
               </div>
               <div className="habit-card__content">
                 <h3 className="habit-card__title">{habit.title}</h3>
-                <p className="habit-card__category">{habit.category}</p>
+                <p className="habit-card__category">
+                  {habit.category}
+                  {habit.isArchived ? ' · в архиве' : ''}
+                </p>
               </div>
               <button
                 className={`habit-card__check ${
                   habit.completed ? 'habit-card__check--completed' : ''
                 }`}
                 onClick={(e) => handleToggleHabit(e, habit.id)}
+                disabled={habit.isArchived}
                 aria-label={habit.completed ? 'Отметить как невыполненное' : 'Отметить как выполненное'}
               >
                 {habit.completed ? (

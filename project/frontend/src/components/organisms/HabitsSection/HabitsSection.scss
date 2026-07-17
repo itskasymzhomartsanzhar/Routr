@@ -181,6 +181,11 @@
       background: #fff;
     }
 
+    &:disabled {
+      opacity: 0.45;
+      cursor: default;
+    }
+
     svg {
       width: 12px;
       height: 10px;

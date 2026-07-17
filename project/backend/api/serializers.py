@@ -189,6 +189,7 @@ class HabitSerializer(serializers.ModelSerializer):
             "reminder_times",
             "visibility",
             "end_date",
+            "is_archived",
             "created_at",
             "updated_at",
             "completed",
@@ -203,6 +204,7 @@ class HabitSerializer(serializers.ModelSerializer):
             "source_habit_id",
         )
         read_only_fields = (
+            "is_archived",
             "created_at",
             "updated_at",
             "completed",

@@ -101,7 +101,8 @@ const Home = () => {
     bestStreak: habit.best_streak ?? 0,
     sourceHabitId: habit.source_habit_id ?? null,
     createdAt: habit.created_at ?? null,
-    endDate: habit.end_date ?? null
+    endDate: habit.end_date ?? null,
+    isArchived: habit.is_archived ?? false
   })
 
   const mapHabitToApi = (habitData) => {
@@ -244,6 +245,9 @@ const Home = () => {
   const handleToggleHabit = async (id) => {
     const today = formatLocalDate(new Date())
     if (selectedDate > today) {
+      return
+    }
+    if (habits.find((habit) => habit.id === id)?.isArchived) {
       return
     }
     if (pendingCompletes.has(id)) {
